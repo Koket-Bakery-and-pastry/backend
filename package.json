@@ -1,0 +1,22 @@
+{
+  "name": "cake-ordering-backend",
+  "version": "0.1.0",
+  "description": "This repository provides a modular Node.js MVC folder structure for the Cake Ordering System. Each directory is pre-created with placeholder files so implementation details can be filled in later.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Koket-Bakery-and-pastry/backend.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Koket-Bakery-and-pastry/backend/issues"
+  },
+  "homepage": "https://github.com/Koket-Bakery-and-pastry/backend#readme"
+}
