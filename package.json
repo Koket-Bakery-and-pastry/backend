@@ -7,7 +7,15 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
+    "format": "prettier --write .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -18,5 +26,10 @@
   "bugs": {
     "url": "https://github.com/Koket-Bakery-and-pastry/backend/issues"
   },
-  "homepage": "https://github.com/Koket-Bakery-and-pastry/backend#readme"
+  "homepage": "https://github.com/Koket-Bakery-and-pastry/backend#readme",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "mongoose": "^8.18.3",
+    "winston": "^3.18.3"
+  }
 }
