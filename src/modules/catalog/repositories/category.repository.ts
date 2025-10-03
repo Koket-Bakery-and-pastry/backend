@@ -18,7 +18,7 @@ export class CategoryRepository {
    * @returns An array of category documents.
    */
   async findAll(): Promise<ICategory[]> {
-    return Category.find();
+    return Category.find().exec();
   }
 
   /**
@@ -27,7 +27,7 @@ export class CategoryRepository {
    * @returns The category document, or null if not found.
    */
   async findById(id: string): Promise<ICategory | null> {
-    return Category.findById(id);
+    return Category.findById(id).exec();
   }
 
   /**
@@ -36,7 +36,7 @@ export class CategoryRepository {
    * @returns The category document, or null if not found.
    */
   async findByName(name: string): Promise<ICategory | null> {
-    return Category.findOne({ name });
+    return Category.findOne({ name }).exec();
   }
 
   /**
@@ -46,7 +46,7 @@ export class CategoryRepository {
    * @returns The updated category document, or null if not found.
    */
   async update(id: string, data: UpdateCategoryDto): Promise<ICategory | null> {
-    return Category.findByIdAndUpdate(id, data, { new: true }); // `new: true` returns the updated document
+    return Category.findByIdAndUpdate(id, data, { new: true }).exec(); // `new: true` returns the updated document
   }
 
   /**
@@ -55,6 +55,6 @@ export class CategoryRepository {
    * @returns The deleted category document, or null if not found.
    */
   async delete(id: string): Promise<ICategory | null> {
-    return Category.findByIdAndDelete(id);
+    return Category.findByIdAndDelete(id).exec();
   }
 }

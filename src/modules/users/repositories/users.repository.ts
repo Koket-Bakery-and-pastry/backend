@@ -21,7 +21,7 @@ export class UserRepository {
    */
 
   async findByEmail(email: string): Promise<IUser | null> {
-    return User.findOne({ email });
+    return User.findOne({ email }).exec();
   }
 
   /**
@@ -30,6 +30,6 @@ export class UserRepository {
    * @returns The user document if found, otherwise null.
    */
   async findById(id: string): Promise<IUser | null> {
-    return User.findById(id);
+    return User.findById(id).exec();
   }
 }

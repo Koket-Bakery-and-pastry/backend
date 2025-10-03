@@ -1,130 +1,104 @@
-import { HttpError } from "../../../core/errors/HttpError";
-import { objectIdSchema } from "../../../core/validators/objectId.validation";
-import { CategoryService } from "../services/category.service";
-import {
-  createCategorySchema,
-  updateCategorySchema,
-} from "../validators/category.validation";
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
+import mongoose from "mongoose";
+import Category from "../../../database/models/category.model";
 
-export class CategoryController {
-  private categoryService: CategoryService;
+// Helper to check for valid MongoDB ObjectId
+const isValidObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
 
-  constructor() {
-    this.categoryService = new CategoryService();
+export const createCategory = async (req: Request, res: Response) => {
+  try {
+    const { name, description } = req.body;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Category name cannot be empty" });
+    }
+    const existing = await Category.findOne({ name });
+    if (existing) {
+      return res.status(409).json({
+        message: `Category with name '${name}' already exists.`,
+      });
+    }
+    const category = await Category.create({ name, description });
+    return res.status(201).json({
+      message: "Category created successfully",
+      category,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
   }
+};
 
-  /**
-   * Creates a new Category
-   * POST /api/v1/categories
-   */
-  createCategory = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const categoryData = createCategorySchema.parse(req.body);
-      const newCategory = await this.categoryService.createCategory(
-        categoryData
-      );
-      res.status(201).json({
-        message: "Category created successfully",
-        category: newCategory,
-      });
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        return next(
-          new HttpError(400, error.errors.map((e: any) => e.message).join(", "))
-        );
-      }
-      next(error);
-    }
-  };
+export const getAllCategories = async (_req: Request, res: Response) => {
+  try {
+    const categories = await Category.find();
+    return res.status(200).json({
+      message: "Categories retrieved successfully",
+      categories,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
-  /**
-   * RETRIEVES all categories
-   * GET /api/v1/categories
-   */
-  getAllCategories = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const categories = await this.categoryService.getAllCategories();
-      res.status(200).json({
-        message: "Categories retrieved successfully",
-        categories,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-  /**
-   * RETRIEVES a category by ID
-   * GET /api/v1/categories/:id
-   */
-  getCategoryById = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const id = objectIdSchema.parse(req.params.id); // Validate ID
-      const category = await this.categoryService.getCategoryById(id);
-      res.status(200).json({
-        message: "Category retrieved successfully",
-        category,
-      });
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        return next(
-          new HttpError(400, error.errors.map((e: any) => e.message).join(", "))
-        );
-      }
-      next(error);
-    }
-  };
+export const getCategoryById = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid MongoDB ObjectId format" });
+  }
+  const category = await Category.findById(id);
+  if (!category) {
+    return res
+      .status(404)
+      .json({ message: `Category with ID '${id}' not found.` });
+  }
+  return res.status(200).json({
+    message: "Category retrieved successfully",
+    category,
+  });
+};
 
-  /**
-   * UPDATES a category by ID
-   * PUT /api/v1/categories/:id
-   */
-  updateCategory = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const id = objectIdSchema.parse(req.params.id); // Validate ID
-
-      const updateData = updateCategorySchema.parse(req.body); // Validate body
-      const updatedCategory = await this.categoryService.updateCategory(
-        id,
-        updateData
-      );
-      res.status(200).json({
-        message: "Category updated successfully",
-        category: updatedCategory,
+export const updateCategory = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid MongoDB ObjectId format" });
+  }
+  const category = await Category.findById(id);
+  if (!category) {
+    return res
+      .status(404)
+      .json({ message: `Category with ID '${id}' not found for update.` });
+  }
+  if (name) {
+    const duplicate = await Category.findOne({ name, _id: { $ne: id } });
+    if (duplicate) {
+      return res.status(409).json({
+        message: `Category with name '${name}' already exists.`,
       });
-    } catch (error: any) {
-      if (error.name == "ZodError") {
-        return next(
-          new HttpError(400, error.errors.map((e: any) => e.message).join(", "))
-        );
-      }
-      next(error);
     }
-  };
+    category.name = name;
+  }
+  if (description !== undefined) category.description = description;
+  await category.save();
+  return res.status(200).json({
+    message: "Category updated successfully",
+    category,
+  });
+};
 
-  /**
-   * DELETES a category by ID
-   * DELETE /api/v1/categories/:id
-   * */
-  deleteCategory = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const id = objectIdSchema.parse(req.params.id); // Validate ID
-      const deletedCategory = await this.categoryService.deleteCategory(id);
-      res.status(200).json({
-        message: "Category deleted successfully",
-        category: deletedCategory,
-      });
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        return next(
-          new HttpError(400, `Invalid Category ID: ${error.errors[0].message}`)
-        );
-      }
-      next(error);
-    }
-  };
-}
+export const deleteCategory = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid MongoDB ObjectId format" });
+  }
+  const category = await Category.findById(id);
+  if (!category) {
+    return res.status(404).json({
+      message: `Category with ID '${id}' not found for deletion.`,
+    });
+  }
+  await category.deleteOne();
+  return res.status(200).json({
+    message: "Category deleted successfully",
+    category,
+  });
+};

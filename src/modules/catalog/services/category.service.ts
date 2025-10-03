@@ -63,7 +63,10 @@ export class CategoryService {
       const existingCategory = await this.categoryRepository.findByName(
         data.name
       );
-      if (existingCategory && existingCategory._id.toString() !== id) {
+      if (
+        existingCategory &&
+        (existingCategory._id as { toString(): string }).toString() !== id
+      ) {
         throw new HttpError(409, "Category with this name already exists");
       }
     }
