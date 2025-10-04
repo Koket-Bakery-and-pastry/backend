@@ -1,12 +1,15 @@
 import { Router } from "express";
-import {
-  googleAuthRedirect,
-  googleAuthCallback,
-} from "../controllers/auth.controller";
+import { authController } from "../controllers/auth.controller";
 
 const router = Router();
 
-router.get("/google", googleAuthRedirect); // Step 1: redirect to Google login
-router.get("/google/callback", googleAuthCallback); // Step 2: handle callback
+router.get("/google", authController.googleAuthRedirect);
+router.get("/google/callback", authController.googleAuthCallback);
+router.post("/register", authController.register);
+router.get("/test", (req, res) => {
+  res.send("Auth route is working");
+});
+router.post("/login", authController.login);
+router.post("/refresh", authController.refresh);
 
 export default router;

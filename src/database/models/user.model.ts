@@ -5,6 +5,8 @@ export interface IUser extends Document {
   email: string;
   password_hash: string;
   role: "customer" | "admin";
+  refresh_token?: string;
+  googleId: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -30,6 +32,13 @@ const userSchema = new Schema<IUser>({
     type: String,
     enum: ["customer", "admin"],
     default: "customer",
+  },
+  refresh_token: {
+    type: String,
+  },
+  googleId: {
+    type: String,
+    default: "",
   },
 
   created_at: {
