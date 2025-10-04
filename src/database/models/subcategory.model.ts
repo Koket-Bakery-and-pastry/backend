@@ -1,7 +1,8 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export interface ISubcategory extends Document {
-  category_id: Types.ObjectId;
+  _id: Types.ObjectId | string;
+  category_id: Types.ObjectId | string;
   name: string;
   status: "available" | "coming_soon";
   created_at: Date;
