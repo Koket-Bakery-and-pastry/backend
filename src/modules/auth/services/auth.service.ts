@@ -1,4 +1,5 @@
-import { Issuer, generators, Client } from "openid-client";
+// Import openid-client dynamically to avoid TypeScript import/runtime mismatches across versions
+const OpenIDClient = require("openid-client");
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as AuthRepository from "../repositories/auth.repository";
@@ -12,13 +13,17 @@ import { Types } from "mongoose";
 import User, { IUser } from "../../../database/models/user.model";
 
 class AuthService {
-  private googleClient: Client | undefined;
+  // openid-client's types may be loaded differently depending on installed version; use any to avoid TS import mismatch
+  private googleClient: any | undefined;
   private redirectUri: string = process.env.GOOGLE_REDIRECT_URI!;
   private accessSecret = process.env.JWT_ACCESS_SECRET!;
   private refreshSecret = process.env.JWT_REFRESH_SECRET!;
 
   private async getGoogleClient() {
     if (!this.googleClient) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Issuer = OpenIDClient.Issuer || OpenIDClient.default?.Issuer;
+      if (!Issuer) throw new Error("openid-client Issuer not found");
       const googleIssuer = await Issuer.discover("https://accounts.google.com");
       this.googleClient = new googleIssuer.Client({
         client_id: process.env.GOOGLE_CLIENT_ID!,
@@ -33,6 +38,9 @@ class AuthService {
   // Step 1: Redirect URL
   async getGoogleAuthUrl() {
     const client = await this.getGoogleClient();
+    const generators =
+      OpenIDClient.generators || OpenIDClient.default?.generators;
+    if (!generators) throw new Error("openid-client generators not found");
     const state = generators.state();
     const codeVerifier = generators.codeVerifier();
     const codeChallenge = generators.codeChallenge(codeVerifier);
