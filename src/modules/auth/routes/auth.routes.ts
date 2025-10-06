@@ -1,5 +1,15 @@
-// Auth routes placeholder.
 import { Router } from "express";
+import { authController } from "../controllers/auth.controller";
+
 const router = Router();
-// router.post('/login', ...);
+
+router.get("/google", authController.googleAuthRedirect);
+router.get("/google/callback", authController.googleAuthCallback);
+router.post("/register", authController.register);
+router.get("/test", (req, res) => {
+  res.send("Auth route is working");
+});
+router.post("/login", authController.login);
+router.post("/refresh", authController.refresh);
+
 export default router;
