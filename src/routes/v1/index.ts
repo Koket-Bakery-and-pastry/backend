@@ -5,7 +5,7 @@ import userRoutes from "../../modules/users/routes/users.routes";
 import categoryRoutes from "../../modules/catalog/routes/categories.route";
 import subcategoryRoutes from "../../modules/catalog/routes/subcategory.routes";
 import productReviewRoutes from "../../modules/reviews/routes/reviews.routes";
-
+import cartsRoute from "../../modules/carts/routes/carts.routes";
 const router = Router();
 
 // Define API routes for v1
@@ -15,4 +15,5 @@ router.use("/users", userRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/subcategories", subcategoryRoutes);
 router.use("/reviews", productReviewRoutes);
+router.use("/carts", cartsRoute);
 export default router;
