@@ -4,6 +4,8 @@ import productRoutes from "../../modules/products/routes/products.routes";
 import userRoutes from "../../modules/users/routes/users.routes";
 import categoryRoutes from "../../modules/catalog/routes/categories.route";
 import subcategoryRoutes from "../../modules/catalog/routes/subcategory.routes";
+import orderRoutes from "../../modules/orders/routes/orders.routes";
+import { authenticate } from "../../core/middlewares/auth.middleware";
 
 const router = Router();
 
@@ -13,4 +15,5 @@ router.use("/products", productRoutes);
 router.use("/users", userRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/subcategories", subcategoryRoutes);
+router.use("/orders", orderRoutes);
 export default router;

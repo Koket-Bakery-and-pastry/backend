@@ -10,6 +10,7 @@ import {
 } from "../dtos/auth.dto";
 import { Types } from "mongoose";
 import User, { IUser } from "../../../database/models/user.model";
+import { Env } from "../../../config/env";
 
 class AuthService {
   private googleClient: Client | undefined;
@@ -78,7 +79,7 @@ class AuthService {
     }
 
     const payload: TokenPayload = {
-      userId: (user._id as Types.ObjectId).toString(),
+      userId: user._id as Types.ObjectId,
       email: user.email,
       role: user.role,
     };
@@ -97,7 +98,7 @@ class AuthService {
 
     return {
       user: {
-        id: (user._id as Types.ObjectId).toString(),
+        id: user._id as Types.ObjectId,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -115,6 +116,7 @@ class AuthService {
       name: dto.name,
       email: dto.email,
       password_hash: hashed,
+      role: "customer",
     });
 
     return this.generateTokens(user);
@@ -143,16 +145,16 @@ class AuthService {
 
   private generateTokens(user: IUser): AuthResponseDto {
     const payload: TokenPayload = {
-      userId: user._id.toString(),
+      userId: user._id as Types.ObjectId,
       email: user.email,
       role: user.role,
     };
 
     const accessToken = jwt.sign(payload, this.accessSecret, {
-      expiresIn: "15m",
+      expiresIn: Env.JWT_EXPIRES_IN,
     });
     const refreshToken = jwt.sign(payload, this.refreshSecret, {
-      expiresIn: "7d",
+      expiresIn: Env.JWT_REFRESH_EXPIRES_IN,
     });
     user.refresh_token = refreshToken;
 
@@ -160,7 +162,7 @@ class AuthService {
 
     return {
       user: {
-        id: user._id.toString(),
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -170,6 +172,23 @@ class AuthService {
         refreshToken,
       },
     };
+  }
+  verifyToken(token: string, isRefresh = false): TokenPayload {
+    try {
+      const secret = isRefresh
+        ? process.env.JWT_REFRESH_SECRET!
+        : process.env.JWT_SECRET!;
+      return jwt.verify(token, secret) as TokenPayload;
+    } catch (error) {
+      throw new Error("Invalid token");
+    }
+  }
+
+  async createAdmin(name: string, email: string, password: string) {
+    const existing = await User.findOne({ email });
+    if (existing) return null;
+    const hashed = await bcrypt.hash(password, 10);
+    return await AuthRepository.create(name, email, hashed);
   }
 }
 
