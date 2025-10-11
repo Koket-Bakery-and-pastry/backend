@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 export interface LoginDto {
   email: string;
   password: string;
@@ -19,7 +21,7 @@ export interface GoogleCallbackDto {
 
 export interface AuthResponseDto {
   user: {
-    id: string;
+    id: Types.ObjectId;
     name: string;
     email: string;
     role: string;
@@ -31,7 +33,7 @@ export interface AuthResponseDto {
 }
 
 export interface TokenPayload {
-  userId: string;
+  userId: Types.ObjectId;
   email: string;
   role: string;
 }

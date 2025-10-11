@@ -1,7 +1,8 @@
 import { Schema, model, Document, Types } from "mongoose";
+import { IOrderItem } from "./orderItem.model";
 
 export interface IOrder extends Document {
-  order_items_id: Types.ObjectId;
+  order_items: Types.ObjectId[];
   user_id: Types.ObjectId;
   phone_number: string;
   total_price: number;
@@ -15,12 +16,11 @@ export interface IOrder extends Document {
 }
 
 const orderSchema = new Schema<IOrder>({
-  order_items_id: {
-    type: Schema.Types.ObjectId,
-    ref: "OrderItem",
-    required: true,
-  },
-  user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  order_items: [
+    { type: Schema.Types.ObjectId, required: true, ref: "OrderItem" },
+  ],
+
+  user_id: { type: Schema.Types.ObjectId, ref: "User" },
   phone_number: { type: String, required: true },
   total_price: { type: Number, required: true },
   upfront_paid: { type: Number, required: true },
