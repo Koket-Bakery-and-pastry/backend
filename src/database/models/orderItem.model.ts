@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export interface IOrderItem extends Document {
-  // product_id: Types.ObjectId;
+  product_id: Types.ObjectId;
   user_id?: Types.ObjectId;
   kilo?: number;
   pieces?: number;
@@ -12,7 +12,7 @@ export interface IOrderItem extends Document {
 }
 
 const orderItemSchema = new Schema<IOrderItem>({
-  // product_id: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+  product_id: { type: Schema.Types.ObjectId, ref: "Product", required: true },
   user_id: { type: Schema.Types.ObjectId, ref: "User" },
   kilo: { type: Number },
   pieces: { type: Number, default: 1 },

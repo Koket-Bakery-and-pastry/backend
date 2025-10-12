@@ -10,10 +10,10 @@ export const createOrderValidation = z.object({
   order_items: z
     .array(
       z.object({
-        // product_id: z
-        //   .string()
-        //   .length(24)
-        //   .regex(/^[0-9a-fA-F]{24}$/),
+        product_id: z
+          .string()
+          .length(24)
+          .regex(/^[0-9a-fA-F]{24}$/),
         kilo: z.number().min(0.5).max(10).optional(),
         pieces: z.number().min(1).max(100).optional(),
         quantity: z.number().min(1).max(10).default(1),

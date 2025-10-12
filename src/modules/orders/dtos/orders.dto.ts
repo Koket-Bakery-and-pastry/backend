@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { File as MulterFile } from "multer";
 
 export interface OrderItemDTO {
-  // product_id?: string;
+  product_id?: string;
   kilo?: number;
   pieces?: number;
   quantity: number;
@@ -12,7 +12,7 @@ export interface OrderItemDTO {
 
 export interface CreateOrderItemDTO {
   user_id?: Types.ObjectId;
-  // product_id: string;
+  product_id: string;
   kilo?: number;
   pieces?: number;
   quantity: number;
@@ -30,7 +30,7 @@ export interface UpdateOrderItemDTO {
 
 export interface OrderItemResponseDTO {
   _id: Types.ObjectId;
-  // product_id: Types.ObjectId;
+  product_id: Types.ObjectId;
   user_id: Types.ObjectId;
   kilo?: number;
   pieces?: number;
