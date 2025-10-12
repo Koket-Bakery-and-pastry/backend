@@ -4,5 +4,5 @@ import { z } from "zod";
 // Provide a required_error so missing ids produce a clear message when used in required fields
 export const objectIdSchema = z
   .string()
-  .min(1, "Category ID is required")
+  .min(1, "ID is required")
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId format");
