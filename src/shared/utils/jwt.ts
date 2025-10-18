@@ -10,7 +10,7 @@ export function generateToken(
   payload: TokenPayload,
   options?: SignOptions
 ): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return (jwt as any).sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
     ...options,
   });

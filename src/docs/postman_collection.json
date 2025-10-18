@@ -1,0 +1,380 @@
+{
+    "info": {
+        "name": "Koket Bakery API",
+        "_postman_id": "koket-bakery-api-collection",
+        "description": "Postman collection generated from OpenAPI for frontend integration. Environment variables: {{baseUrl}} and {{bearerToken}}",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Users",
+            "item": [
+                {
+                    "name": "Register User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/users/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "users",
+                                "register"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Aisha Ahmed\",\n  \"email\": \"aisha@example.com\",\n  \"password\": \"P@ssw0rd!\"\n}"
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Products",
+            "item": [
+                {
+                    "name": "Create Product",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{bearerToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/products",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "products"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Chocolate Fudge Cake\",\n  \"description\": \"Rich chocolate cake with fudge\",\n  \"price\": 25.5,\n  \"categoryId\": \"64f6e0...\",\n  \"subcategoryId\": \"64f6e1...\",\n  \"images\": [\"https://cdn.example.com/images/1.jpg\"],\n  \"stock\": 10\n}"
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/products?page=1&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "products"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Product by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/products/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "products",
+                                ":id"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Categories",
+            "item": [
+                {
+                    "name": "Create Category",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{bearerToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/categories",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "categories"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Cakes\",\n  \"description\": \"Layer cakes and celebration cakes\"\n}"
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/categories",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "categories"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Subcategories",
+            "item": [
+                {
+                    "name": "Create Subcategory",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{bearerToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/subcategories",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "subcategories"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Birthday Cakes\",\n  \"categoryId\": \"64f6e0...\"\n}"
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List Subcategories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/subcategories?categoryId=64f6e0...",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "subcategories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "categoryId",
+                                    "value": "64f6e0..."
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Reviews",
+            "item": [
+                {
+                    "name": "Create/Update Review",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{bearerToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/reviews",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "reviews"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"productId\": \"64f6ef...\",\n  \"rating\": 5,\n  \"title\": \"Delicious\",\n  \"comment\": \"The cake was moist and the frosting was perfect.\"\n}"
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List Reviews",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/reviews?productId=64f6ef...",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "reviews"
+                            ],
+                            "query": [
+                                {
+                                    "key": "productId",
+                                    "value": "64f6ef..."
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Carts",
+            "item": [
+                {
+                    "name": "Add Item to Cart",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{bearerToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/carts",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "carts"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"productId\": \"64f6ef...\",\n  \"quantity\": 2\n}"
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get User Cart",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{bearerToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/carts",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "carts"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Clear Cart",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{bearerToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/carts",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "carts"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "event": [],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:5000/api/v1"
+        },
+        {
+            "key": "bearerToken",
+            "value": ""
+        }
+    ]
+}

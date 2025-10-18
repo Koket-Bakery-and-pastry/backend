@@ -14,8 +14,16 @@ export class UserController {
 
   registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Validate request body using zod Schema
-      const userData = createUserSchema.parse(req.body);
+      // Validate request body using zod Schema safely to avoid throwing and ensure
+      // we don't call the service when input is invalid.
+      const parsed = createUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const issues = parsed.error.issues
+          .map((i: any) => i.message)
+          .join(", ");
+        return next(new HttpError(400, issues));
+      }
+      const userData = parsed.data;
 
       // call the service layer to register the user
       const newUser = await this.userService.registerUser(userData);
