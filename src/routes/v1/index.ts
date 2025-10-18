@@ -7,6 +7,7 @@ import subcategoryRoutes from "../../modules/catalog/routes/subcategory.routes";
 import productReviewRoutes from "../../modules/reviews/routes/reviews.routes";
 import cartsRoute from "../../modules/carts/routes/carts.routes";
 import orderRoutes from "../../modules/orders/routes/orders.routes";
+import customOrdersRoutes from "../../modules/custom-orders/routes/custom-orders.routes";
 import { authenticate } from "../../core/middlewares/auth.middleware";
 
 const router = Router();
@@ -20,5 +21,6 @@ router.use("/subcategories", subcategoryRoutes);
 router.use("/reviews", productReviewRoutes);
 router.use("/carts", cartsRoute);
 router.use("/orders", orderRoutes);
+router.use("/custom-orders", customOrdersRoutes);
 
 export default router;
