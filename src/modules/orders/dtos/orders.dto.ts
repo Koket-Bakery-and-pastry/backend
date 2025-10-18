@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
-import { File as MulterFile } from "multer";
+// Multer types can vary; use `any` here to avoid type mismatch with installed multer version
+type MulterFile = any;
 
 export interface OrderItemDTO {
   product_id?: string;

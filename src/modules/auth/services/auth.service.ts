@@ -22,8 +22,9 @@ class AuthService {
   // openid-client's types may be loaded differently depending on installed version; use any to avoid TS import mismatch
   private googleClient: any | undefined;
   private redirectUri: string = process.env.GOOGLE_REDIRECT_URI!;
-  private accessSecret = process.env.JWT_ACCESS_SECRET!;
-  private refreshSecret = process.env.JWT_REFRESH_SECRET!;
+  // use string here to avoid overload resolution issues with the jsonwebtoken types
+  private accessSecret: string = process.env.JWT_ACCESS_SECRET!;
+  private refreshSecret: string = process.env.JWT_REFRESH_SECRET!;
 
   private async getGoogleClient() {
     if (!this.googleClient) {
