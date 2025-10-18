@@ -12,7 +12,7 @@ const kiloToPriceMapSchema = z
       ),
     z.number().positive("Price must be a positive number.")
   )
-  .optional(); // Optional at the top level, but conditional logic will enforce its presence
+  .optional();
 
 // Schema for creating a new product
 export const createProductSchema = z
