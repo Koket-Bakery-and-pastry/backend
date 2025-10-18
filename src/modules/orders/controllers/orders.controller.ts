@@ -13,7 +13,7 @@ import type { Multer } from "multer";
 import { getPayloadFromAuthHeader } from "../../../shared/utils/jwt";
 // Extend Express Request type to include 'file' property
 interface RequestWithFile extends Request {
-  file?: Multer.File;
+  file?: Express.Multer.File;
 }
 
 export class OrdersController {

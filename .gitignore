@@ -100,3 +100,6 @@ prisma/generated/
 # Mac files
 .DS_Store
 .husky/
+
+
+dist/

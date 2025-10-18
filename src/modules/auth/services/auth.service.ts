@@ -1,6 +1,6 @@
 // Import openid-client dynamically to avoid TypeScript import/runtime mismatches across versions
 const OpenIDClient = require("openid-client");
-import jwt from "jsonwebtoken";
+import * as jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as AuthRepository from "../repositories/auth.repository";
 import {
@@ -17,8 +17,9 @@ class AuthService {
   // openid-client's types may be loaded differently depending on installed version; use any to avoid TS import mismatch
   private googleClient: any | undefined;
   private redirectUri: string = process.env.GOOGLE_REDIRECT_URI!;
-  private accessSecret = process.env.JWT_ACCESS_SECRET!;
-  private refreshSecret = process.env.JWT_REFRESH_SECRET!;
+  // use string here to avoid overload resolution issues with the jsonwebtoken types
+  private accessSecret: string = process.env.JWT_ACCESS_SECRET!;
+  private refreshSecret: string = process.env.JWT_REFRESH_SECRET!;
 
   private async getGoogleClient() {
     if (!this.googleClient) {
@@ -92,11 +93,12 @@ class AuthService {
       role: user.role,
     };
 
-    const accessToken = jwt.sign(payload, process.env.JWT_SECRET!, {
-      expiresIn: "15m",
+    const accessToken = jwt.sign(payload, this.accessSecret, {
+      // cast to any to satisfy @types/jsonwebtoken's StringValue type
+      expiresIn: "15m" as unknown as any,
     });
-    const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
-      expiresIn: "7d",
+    const refreshToken = jwt.sign(payload, this.refreshSecret, {
+      expiresIn: "7d" as unknown as any,
     });
 
     await AuthRepository.updateRefreshToken(
@@ -159,10 +161,10 @@ class AuthService {
     };
 
     const accessToken = jwt.sign(payload, this.accessSecret, {
-      expiresIn: Env.JWT_EXPIRES_IN,
+      expiresIn: Env.JWT_EXPIRES_IN as unknown as any,
     });
     const refreshToken = jwt.sign(payload, this.refreshSecret, {
-      expiresIn: Env.JWT_REFRESH_EXPIRES_IN,
+      expiresIn: Env.JWT_REFRESH_EXPIRES_IN as unknown as any,
     });
     user.refresh_token = refreshToken;
 
@@ -183,9 +185,7 @@ class AuthService {
   }
   verifyToken(token: string, isRefresh = false): TokenPayload {
     try {
-      const secret = isRefresh
-        ? process.env.JWT_REFRESH_SECRET!
-        : process.env.JWT_SECRET!;
+      const secret = isRefresh ? this.refreshSecret : this.accessSecret;
       return jwt.verify(token, secret) as TokenPayload;
     } catch (error) {
       throw new Error("Invalid token");
