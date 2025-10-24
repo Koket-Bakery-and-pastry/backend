@@ -6,17 +6,20 @@ import { UserRepository } from "../../users/repositories/users.repository";
 import { AddToCartDto, UpdateCartItemDto } from "../dtos/carts.dto";
 import { ProductRepository } from "../../products/repositories/products.repository";
 import { CartRepository } from "../repositories/carts.repository";
+import { SubcategoryRepository } from "../../catalog/repositories/subcategory.repository";
 
 // Carts service placeholder.
 export class CartService {
   private cartRepository: CartRepository;
   private productRepository: ProductRepository; // Assuming a ProductRepository exists
   private userRepository: UserRepository; // Assuming a UserRepository exists
+  private subcategoryRepository: SubcategoryRepository;
 
   constructor() {
     this.cartRepository = new CartRepository();
     this.productRepository = new ProductRepository();
     this.userRepository = new UserRepository();
+    this.subcategoryRepository = new SubcategoryRepository();
   }
 
   private async validateProductItemOptions(
@@ -27,7 +30,25 @@ export class CartService {
     const hasPieces = typeof dto.pieces === "number" && dto.pieces > 0;
     const hasQuantity = typeof dto.quantity === "number" && dto.quantity > 0;
 
-    if (product.is_pieceable) {
+    // Determine pricing mode from the product's subcategory
+    const subcategoryId = (product as any).subcategory_id;
+    const subcategory = await this.subcategoryRepository.findById(
+      subcategoryId?.toString()
+    );
+    if (!subcategory) {
+      throw new HttpError(
+        404,
+        `Subcategory for product '${product.name}' not found.`
+      );
+    }
+
+    const kiloMap = subcategory.kilo_to_price_map || {};
+    const isPieceable =
+      typeof subcategory.is_pieceable === "boolean"
+        ? subcategory.is_pieceable
+        : !kiloMap || Object.keys(kiloMap).length === 0;
+
+    if (isPieceable) {
       if (hasKilo) {
         throw new Error(
           "Kilo option is not applicable for pieceable products."
@@ -44,6 +65,7 @@ export class CartService {
       if (hasQuantity && dto.quantity! <= 0)
         throw new HttpError(400, "Quantity must be greater than 0.");
     } else {
+      // Non-pieceable -> kilo-based
       if (hasPieces) {
         throw new Error(
           "Pieces option is not applicable for non-pieceable products."
@@ -58,26 +80,22 @@ export class CartService {
         throw new HttpError(400, "Kilo must be greater than 0.");
       if (hasQuantity && dto.quantity! <= 0)
         throw new HttpError(400, "Quantity must be greater than 0.");
-      if (hasKilo && product.kilo_to_price_map) {
+      if (hasKilo && kiloMap) {
         const kiloKey = `${dto.kilo}kg`; // Assuming '1kg', '2kg' format
-        if (!product.kilo_to_price_map.hasOwnProperty(kiloKey)) {
+        if (!Object.prototype.hasOwnProperty.call(kiloMap, kiloKey)) {
+          const available = Object.keys(kiloMap).length
+            ? Object.keys(kiloMap).join(", ")
+            : "none configured";
           throw new HttpError(
             400,
-            `Invalid kilo value '${dto.kilo}kg' for product '${
-              product.name
-            }'. Available options: ${Object.keys(
-              product.kilo_to_price_map
-            ).join(", ")}.`
+            `Invalid kilo value '${dto.kilo}kg' for product '${product.name}'. Available options: ${available}.`
           );
         }
       }
-      // If kilo is not provided, it implies a single unit of the default product.
-      // We rely on 'quantity' to determine how many such units.
     }
   }
 
   async addItemToCart(data: AddToCartDto): Promise<ICart> {
-    // Validate user existence
     const user = await this.userRepository.findById(data.user_id);
     if (!user) {
       throw new HttpError(404, `User with ID '${data.user_id}' not found.`);
@@ -96,6 +114,21 @@ export class CartService {
       );
     }
 
+    // Determine pricing mode from the product's subcategory to guide updates
+    const prodSubcatId = (product as any).subcategory_id;
+    const prodSubcat = await this.subcategoryRepository.findById(
+      prodSubcatId?.toString()
+    );
+    if (!prodSubcat) {
+      throw new HttpError(
+        404,
+        `Subcategory for product '${product.name}' not found.`
+      );
+    }
+    const prodKiloMap = prodSubcat.kilo_to_price_map || {};
+    const prodIsPieceable =
+      !prodKiloMap || Object.keys(prodKiloMap).length === 0;
+
     await this.validateProductItemOptions(product, data);
     const existingCartItem = await this.cartRepository.findByUserAndProduct(
       data.user_id,
@@ -104,7 +137,7 @@ export class CartService {
     if (existingCartItem) {
       // If item already exists in cart, update its quantity/pieces/kilo
       const updatePayload: UpdateCartItemDto = {};
-      if (product.is_pieceable) {
+      if (prodIsPieceable) {
         updatePayload.pieces =
           data.pieces !== undefined ? data.pieces : existingCartItem.pieces;
         updatePayload.quantity =
@@ -213,9 +246,62 @@ export class CartService {
     };
     await this.validateProductItemOptions(product, combinedData);
 
+    // Determine pricing mode from product's subcategory for update behavior
+    const prodSubcatId2 = (product as any).subcategory_id;
+    const prodSubcat2 = await this.subcategoryRepository.findById(
+      prodSubcatId2?.toString()
+    );
+    if (!prodSubcat2) {
+      throw new HttpError(
+        404,
+        `Subcategory for product '${product.name}' not found.`
+      );
+    }
+    const prodKiloMap2 = prodSubcat2.kilo_to_price_map || {};
+    const prodIsPieceable2 =
+      !prodKiloMap2 || Object.keys(prodKiloMap2).length === 0;
+
+    const updatePayload: UpdateCartItemDto = {};
+    if (prodIsPieceable2) {
+      updatePayload.pieces =
+        updateData.pieces !== undefined ? updateData.pieces : cartItem.pieces;
+      updatePayload.quantity =
+        updateData.quantity !== undefined
+          ? updateData.quantity
+          : cartItem.quantity;
+      if (
+        updatePayload.pieces !== undefined &&
+        updatePayload.quantity !== undefined
+      ) {
+        updatePayload.pieces = updatePayload.quantity = Math.max(
+          updatePayload.pieces,
+          updatePayload.quantity
+        );
+      } else if (updatePayload.pieces !== undefined) {
+        updatePayload.quantity = updatePayload.pieces;
+      } else if (updatePayload.quantity !== undefined) {
+        updatePayload.pieces = updatePayload.quantity;
+      }
+    } else {
+      updatePayload.kilo =
+        updateData.kilo !== undefined ? updateData.kilo : cartItem.kilo;
+      updatePayload.quantity =
+        updateData.quantity !== undefined
+          ? updateData.quantity
+          : cartItem.quantity;
+    }
+    updatePayload.custom_text =
+      updateData.custom_text !== undefined
+        ? updateData.custom_text
+        : cartItem.custom_text;
+    updatePayload.additional_description =
+      updateData.additional_description !== undefined
+        ? updateData.additional_description
+        : cartItem.additional_description;
+
     const updatedCartItem = await this.cartRepository.update(
       cartItemId,
-      updateData
+      updatePayload
     );
     if (!updatedCartItem) {
       throw new HttpError(500, "Failed to update cart Item unexpectedly.");

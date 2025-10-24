@@ -1,4 +1,3 @@
-// Reviews DTO placeholder.
 export interface CreateProductReviewDto {
   product_id: string;
   user_id: string;

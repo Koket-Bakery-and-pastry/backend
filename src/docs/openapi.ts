@@ -253,21 +253,44 @@ const openApiDocument = {
         },
       },
 
-      // Request / Response wrappers for clarity to frontend
+      // Request / Response wrappers and auth schemas
       UserRegisterRequest: { $ref: "#/components/schemas/UserRegister" },
       UserRegisterResponse: {
         type: "object",
         properties: {
-          id: { type: "string" },
-          name: { type: "string" },
-          email: { type: "string" },
-          createdAt: { type: "string", format: "date-time" },
+          message: { type: "string" },
+          user: { type: "object" },
+        },
+      },
+
+      AuthTokens: {
+        type: "object",
+        properties: {
+          accessToken: { type: "string" },
+          refreshToken: { type: "string" },
+        },
+      },
+
+      AuthResponse: {
+        type: "object",
+        properties: {
+          user: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              email: { type: "string" },
+              role: { type: "string" },
+            },
+          },
+          tokens: { $ref: "#/components/schemas/AuthTokens" },
         },
       },
 
       ProductResponse: {
         type: "object",
         properties: {
+          message: { type: "string" },
           product: { $ref: "#/components/schemas/Product" },
         },
       },
@@ -275,41 +298,87 @@ const openApiDocument = {
       ProductsListResponse: {
         type: "object",
         properties: {
-          items: {
+          message: { type: "string" },
+          products: {
             type: "array",
             items: { $ref: "#/components/schemas/Product" },
           },
-          total: { type: "integer" },
-          page: { type: "integer" },
-          limit: { type: "integer" },
         },
       },
 
       CategoryResponse: {
         type: "object",
-        properties: { category: { $ref: "#/components/schemas/Category" } },
+        properties: {
+          message: { type: "string" },
+          category: { $ref: "#/components/schemas/Category" },
+        },
+      },
+      CategoriesListResponse: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          categories: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Category" },
+          },
+        },
       },
       SubcategoryResponse: {
         type: "object",
         properties: {
+          message: { type: "string" },
           subcategory: { $ref: "#/components/schemas/Subcategory" },
         },
       },
-
-      CartResponse: {
+      SubcategoriesListResponse: {
         type: "object",
         properties: {
-          items: {
+          message: { type: "string" },
+          subcategories: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Subcategory" },
+          },
+        },
+      },
+
+      CartItemResponse: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          cartItem: { type: "object" },
+        },
+      },
+      CartItemsListResponse: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          cartItems: {
             type: "array",
             items: { $ref: "#/components/schemas/CartItem" },
           },
-          totalAmount: { type: "number", format: "float" },
         },
       },
 
       ProductReviewResponse: {
         type: "object",
-        properties: { review: { $ref: "#/components/schemas/ProductReview" } },
+        properties: {
+          message: { type: "string" },
+          review: { $ref: "#/components/schemas/ProductReview" },
+        },
+      },
+      ProductReviewsListResponse: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          reviews: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ProductReview" },
+          },
+        },
+      },
+      MessageResponse: {
+        type: "object",
+        properties: { message: { type: "string" } },
       },
     },
   },
@@ -332,12 +401,6 @@ const openApiDocument = {
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/UserRegisterResponse" },
-                example: {
-                  id: "64f6a1...",
-                  name: "Aisha Ahmed",
-                  email: "aisha@example.com",
-                  createdAt: "2025-10-14T12:00:00Z",
-                },
               },
             },
           },
@@ -346,11 +409,120 @@ const openApiDocument = {
       },
     },
 
+    "/auth/register": {
+      post: {
+        tags: ["Users"],
+        summary: "Register (auth) - returns tokens",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UserRegister" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "User registered with tokens",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AuthResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/auth/login": {
+      post: {
+        tags: ["Users"],
+        summary: "Authenticate user and return tokens",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  email: { type: "string", format: "email" },
+                  password: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Auth success",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AuthResponse" },
+              },
+            },
+          },
+          "400": { description: "Invalid credentials" },
+        },
+      },
+    },
+
+    "/auth/refresh": {
+      post: {
+        tags: ["Users"],
+        summary: "Refresh tokens using refresh token",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: { refreshToken: { type: "string" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "New tokens",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AuthResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/auth/google": {
+      get: {
+        tags: ["Users"],
+        summary: "Start Google OAuth (redirect)",
+        responses: { "302": { description: "Redirect to Google" } },
+      },
+    },
+
+    "/auth/google/callback": {
+      get: {
+        tags: ["Users"],
+        summary: "Google OAuth callback",
+        responses: {
+          "200": {
+            description: "OAuth callback returns tokens/user info",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AuthResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+
     "/products": {
       post: {
         tags: ["Products"],
         summary: "Create a product",
-        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -364,6 +536,24 @@ const openApiDocument = {
                 subcategoryId: "64f6e1...",
                 images: ["https://cdn.example.com/images/1.jpg"],
                 stock: 10,
+              },
+            },
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  description: { type: "string" },
+                  price: { type: "number" },
+                  categoryId: { type: "string" },
+                  subcategoryId: { type: "string" },
+                  image: { type: "string", format: "binary" },
+                  images: {
+                    type: "array",
+                    items: { type: "string", format: "binary" },
+                  },
+                  stock: { type: "integer" },
+                },
               },
             },
           },
@@ -384,9 +574,8 @@ const openApiDocument = {
         tags: ["Products"],
         summary: "Get all products",
         parameters: [
-          { name: "page", in: "query", schema: { type: "integer" } },
-          { name: "limit", in: "query", schema: { type: "integer" } },
           { name: "categoryId", in: "query", schema: { type: "string" } },
+          { name: "subcategoryId", in: "query", schema: { type: "string" } },
         ],
         responses: {
           "200": {
@@ -395,16 +584,14 @@ const openApiDocument = {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ProductsListResponse" },
                 example: {
-                  items: [
+                  message: "Products retrieved successfully",
+                  products: [
                     {
                       id: "64f6ef...",
                       name: "Chocolate Fudge Cake",
                       price: 25.5,
                     },
                   ],
-                  total: 1,
-                  page: 1,
-                  limit: 10,
                 },
               },
             },
@@ -429,17 +616,17 @@ const openApiDocument = {
             description: "OK",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/Product" },
+                schema: { $ref: "#/components/schemas/ProductResponse" },
               },
             },
           },
+          "400": { description: "Bad request" },
           "404": { description: "Not found" },
         },
       },
       put: {
         tags: ["Products"],
         summary: "Update product",
-        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -453,17 +640,42 @@ const openApiDocument = {
             "application/json": {
               schema: { $ref: "#/components/schemas/Product" },
             },
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  description: { type: "string" },
+                  price: { type: "number" },
+                  categoryId: { type: "string" },
+                  subcategoryId: { type: "string" },
+                  image: { type: "string", format: "binary" },
+                  images: {
+                    type: "array",
+                    items: { type: "string", format: "binary" },
+                  },
+                  stock: { type: "integer" },
+                },
+              },
+            },
           },
         },
         responses: {
-          "200": { description: "Updated" },
+          "200": {
+            description: "Updated",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ProductResponse" },
+              },
+            },
+          },
           "400": { description: "Bad request" },
+          "404": { description: "Not found" },
         },
       },
       delete: {
         tags: ["Products"],
         summary: "Delete product",
-        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -473,7 +685,14 @@ const openApiDocument = {
           },
         ],
         responses: {
-          "204": { description: "Deleted" },
+          "200": {
+            description: "Deleted",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ProductResponse" },
+              },
+            },
+          },
           "404": { description: "Not found" },
         },
       },
@@ -510,11 +729,11 @@ const openApiDocument = {
             description: "OK",
             content: {
               "application/json": {
-                schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/Category" },
+                schema: { $ref: "#/components/schemas/CategoriesListResponse" },
+                example: {
+                  message: "Categories retrieved successfully",
+                  categories: [{ id: "64f6e0...", name: "Cakes" }],
                 },
-                example: [{ id: "64f6e0...", name: "Cakes" }],
               },
             },
           },
@@ -571,7 +790,16 @@ const openApiDocument = {
             schema: { type: "string" },
           },
         ],
-        responses: { "204": { description: "Deleted" } },
+        responses: {
+          "200": {
+            description: "Deleted",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CategoryResponse" },
+              },
+            },
+          },
+        },
       },
     },
 
@@ -610,16 +838,18 @@ const openApiDocument = {
             content: {
               "application/json": {
                 schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/Subcategory" },
+                  $ref: "#/components/schemas/SubcategoriesListResponse",
                 },
-                example: [
-                  {
-                    id: "64f6e1...",
-                    name: "Birthday Cakes",
-                    categoryId: "64f6e0...",
-                  },
-                ],
+                example: {
+                  message: "Subcategories retrieved successfully",
+                  subcategories: [
+                    {
+                      id: "64f6e1...",
+                      name: "Birthday Cakes",
+                      categoryId: "64f6e0...",
+                    },
+                  ],
+                },
               },
             },
           },
@@ -676,7 +906,16 @@ const openApiDocument = {
             schema: { type: "string" },
           },
         ],
-        responses: { "204": { description: "Deleted" } },
+        responses: {
+          "200": {
+            description: "Deleted",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/SubcategoryResponse" },
+              },
+            },
+          },
+        },
       },
     },
 
@@ -708,6 +947,7 @@ const openApiDocument = {
         summary: "Get product reviews",
         parameters: [
           { name: "productId", in: "query", schema: { type: "string" } },
+          { name: "userId", in: "query", schema: { type: "string" } },
         ],
         responses: {
           "200": {
@@ -715,18 +955,20 @@ const openApiDocument = {
             content: {
               "application/json": {
                 schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/ProductReview" },
+                  $ref: "#/components/schemas/ProductReviewsListResponse",
                 },
-                example: [
-                  {
-                    id: "64f701...",
-                    productId: "64f6ef...",
-                    userId: "64f69a...",
-                    rating: 5,
-                    comment: "Great",
-                  },
-                ],
+                example: {
+                  message: "Product reviews fetched successfully",
+                  reviews: [
+                    {
+                      id: "64f701...",
+                      productId: "64f6ef...",
+                      userId: "64f69a...",
+                      rating: 5,
+                      comment: "Great",
+                    },
+                  ],
+                },
               },
             },
           },
@@ -804,18 +1046,16 @@ const openApiDocument = {
             description: "Added",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/CartResponse" },
+                schema: { $ref: "#/components/schemas/CartItemResponse" },
                 example: {
-                  items: [
-                    {
-                      id: "64f6f2...",
-                      productId: "64f6ef...",
-                      quantity: 2,
-                      unitPrice: 25.5,
-                      totalPrice: 51.0,
-                    },
-                  ],
-                  totalAmount: 51.0,
+                  message: "Cart item added/updated successfully",
+                  cartItem: {
+                    id: "64f6f2...",
+                    productId: "64f6ef...",
+                    quantity: 2,
+                    unitPrice: 25.5,
+                    totalPrice: 51.0,
+                  },
                 },
               },
             },
@@ -831,18 +1071,14 @@ const openApiDocument = {
             description: "OK",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/CartResponse" },
+                schema: { $ref: "#/components/schemas/CartItemsListResponse" },
               },
             },
           },
         },
       },
-      delete: {
-        tags: ["Carts"],
-        summary: "Clear user cart",
-        security: [{ bearerAuth: [] }],
-        responses: { "204": { description: "Cleared" } },
-      },
+      // Note: clearing the cart is implemented as DELETE /carts/clear in the code
+      // the route is documented below as /carts/clear for accuracy
     },
     "/carts/{id}": {
       patch: {
@@ -864,7 +1100,16 @@ const openApiDocument = {
             },
           },
         },
-        responses: { "200": { description: "Updated" } },
+        responses: {
+          "200": {
+            description: "Updated",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CartItemResponse" },
+              },
+            },
+          },
+        },
       },
       delete: {
         tags: ["Carts"],
@@ -878,7 +1123,34 @@ const openApiDocument = {
             schema: { type: "string" },
           },
         ],
-        responses: { "204": { description: "Deleted" } },
+        responses: {
+          "200": {
+            description: "Deleted",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CartItemResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/carts/clear": {
+      delete: {
+        tags: ["Carts"],
+        summary: "Clear user cart",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Cleared",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/MessageResponse" },
+                example: { message: "User cart cleared successfully" },
+              },
+            },
+          },
+        },
       },
     },
   },
