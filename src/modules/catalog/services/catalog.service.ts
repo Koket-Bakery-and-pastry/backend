@@ -1,1 +1,0 @@
-// Catalog service placeholder.

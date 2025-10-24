@@ -58,34 +58,33 @@ export const createProductSchema = z
         //   return false;
         // }
       }
-      return true;
-    },
-    {
-      message:
-        "Product must be either pieceable (with pieces) or sold by kilo (with kilo_to_price_map).",
-      path: ["is_pieceable", "pieces", "kilo_to_price_map"],
-    }
-  );
+    }, "Image URL must be a valid absolute URL or a local uploads path (e.g. /uploads/products/...)."),
+  category_id: objectIdSchema.min(1, "Category ID is required."),
+  subcategory_id: objectIdSchema.min(1, "Subcategory ID is required."),
+  description: z.string().trim().optional(),
+});
 
 // Schema for updating an existing product
 export const updateProductSchema = z
   .object({
     name: z.string().trim().min(1, "Product name cannot be empty.").optional(),
-    image_url: z.string().url("Image URL must be a valid URL.").optional(),
+    image_url: z
+      .string()
+      .optional()
+      .refine((val) => {
+        if (!val) return true; // optional
+        try {
+          const url = new URL(val);
+          return !!url.protocol;
+        } catch (e) {
+          return (
+            /^\/(uploads\/.*|images\/.*)/.test(val) || /^uploads\//.test(val)
+          );
+        }
+      }, "Image URL must be a valid absolute URL or a local uploads path (e.g. /uploads/products/...)."),
     category_id: objectIdSchema.optional(),
     subcategory_id: objectIdSchema.optional(),
     description: z.string().trim().optional(),
-    kilo_to_price_map: kiloToPriceMapSchema,
-    is_pieceable: z.boolean().optional(),
-    pieces: z
-      .number()
-      .int()
-      .positive("Pieces must be a positive integer.")
-      .optional(),
-    upfront_payment: z
-      .number()
-      .positive("Upfront payment must be a positive number.")
-      .optional(),
   })
   .refine(
     (data) => {

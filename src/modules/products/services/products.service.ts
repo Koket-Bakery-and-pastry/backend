@@ -4,6 +4,8 @@ import { SubcategoryRepository } from "../../catalog/repositories/subcategory.re
 import { CreateProductDto, UpdateProductDto } from "../dtos/products.dto";
 import { IProduct } from "../../../database/models/product.model";
 import { HttpError } from "../../../core/errors/HttpError";
+import fs from "fs";
+import path from "path";
 import {
   createProductSchema,
   updateProductSchema,
@@ -160,12 +162,6 @@ export class ProductService {
       subcategory_id: (
         updateData.subcategory_id || existingProduct.subcategory_id
       ).toString(),
-      // Ensure kilo_to_price_map is handled correctly, it's a Map in existingProduct
-      kilo_to_price_map:
-        updateData.kilo_to_price_map ||
-        (existingProduct.kilo_to_price_map instanceof Map
-          ? Object.fromEntries(existingProduct.kilo_to_price_map)
-          : existingProduct.kilo_to_price_map),
     };
 
     // Re-validate the combined data using the create schema to enforce all rules
@@ -229,12 +225,49 @@ export class ProductService {
 
     const updatedProduct = await this.productRepository.update(id, updateData);
     if (!updatedProduct) {
-      // This check is mostly for paranoia, as we already checked existingProduct
       throw new HttpError(
         404,
         `Product with ID '${id}' not found for update (after existing check).`
       );
     }
+
+    // If the update included a new local image_url, attempt to delete the old file
+    try {
+      const newImage = (updateData as any).image_url;
+      const oldImage = existingProduct.image_url;
+      const isLocal = (p?: string) =>
+        !!p && (/^\//.test(p) || /^uploads\//.test(p));
+      if (isLocal(newImage) && isLocal(oldImage) && oldImage !== newImage) {
+        // Resolve to uploads directory only to avoid path traversal
+        const uploadsDir = path.resolve(process.cwd(), "uploads");
+        const oldRel = oldImage.replace(/^\//, "");
+        const oldPath = path.resolve(
+          uploadsDir,
+          oldRel.replace(/^uploads\//, "")
+        );
+        if (oldPath.startsWith(uploadsDir)) {
+          fs.stat(oldPath, (err, stats) => {
+            if (!err && stats.isFile()) {
+              fs.unlink(oldPath, (uErr) => {
+                if (uErr) {
+                  // eslint-disable-next-line no-console
+                  console.warn("Failed to remove old product image:", uErr);
+                } else {
+                  // eslint-disable-next-line no-console
+                  console.log("Removed old product image:", oldPath);
+                }
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn(
+        "Error while attempting to cleanup old image:",
+        e && (e as any).message ? (e as any).message : e
+      );
+    }
+
     return updatedProduct;
   }
 
@@ -252,7 +285,6 @@ export class ProductService {
         `Product with ID '${id}' not found for deletion.`
       );
     }
-    // TODO: Add logic to handle associated carts/orders if a product is deleted
     return deletedProduct;
   }
 }

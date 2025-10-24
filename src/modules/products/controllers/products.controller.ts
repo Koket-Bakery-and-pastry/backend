@@ -7,41 +7,92 @@ import { z } from "zod";
 import { objectIdSchema } from "../../../../src/core/validators/objectId.validation";
 import { HttpError } from "../../../../src/core/errors/HttpError";
 import { Request, Response, NextFunction } from "express";
+import { SubcategoryRepository } from "../../catalog/repositories/subcategory.repository";
 
-// Products controller placeholder.
 export class ProductController {
   private productService: ProductService;
+  private subcategoryRepository: SubcategoryRepository;
 
   constructor() {
     this.productService = new ProductService();
+    this.subcategoryRepository = new SubcategoryRepository();
+  }
+
+  // Enrich a product object with pricing info from its subcategory for backward compatibility
+  private async enrichProductWithPricing(productObj: any) {
+    try {
+      const subcatId = productObj.subcategory_id;
+      if (!subcatId) return productObj;
+      const subcat = await this.subcategoryRepository.findById(
+        subcatId.toString ? subcatId.toString() : String(subcatId)
+      );
+      if (!subcat) return productObj;
+      const kiloMap = subcat.kilo_to_price_map || {};
+      productObj.kilo_to_price_map = kiloMap;
+      productObj.upfront_payment = subcat.upfront_payment;
+      productObj.is_pieceable = !kiloMap || Object.keys(kiloMap).length === 0;
+      return productObj;
+    } catch (e) {
+      // don't block response if enrichment fails
+      return productObj;
+    }
   }
 
   createProduct = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const productData = createProductSchema.parse(req.body);
+      const bodyWithImage = { ...req.body } as any;
+      const r: any = req;
+      let uploadedFile: Express.Multer.File | undefined;
+      if (r.file) uploadedFile = r.file;
+      else if (r.files) {
+        if (Array.isArray(r.files.image) && r.files.image.length)
+          uploadedFile = r.files.image[0];
+        else if (Array.isArray(r.files.images) && r.files.images.length)
+          uploadedFile = r.files.images[0];
+      }
+
+      if (uploadedFile) {
+        bodyWithImage.image_url = `/${uploadedFile.path.replace(/\\/g, "/")}`;
+      }
+
+      const mapField = (from: string, to: string) => {
+        if (
+          bodyWithImage[to] === undefined &&
+          bodyWithImage[from] !== undefined
+        ) {
+          bodyWithImage[to] = bodyWithImage[from];
+        }
+        const rb: any = req.body as any;
+        if (rb && rb[to] === undefined && rb[from] !== undefined)
+          rb[to] = rb[from];
+      };
+
+      mapField("categoryId", "category_id");
+      mapField("subcategoryId", "subcategory_id");
+
+      const productData = createProductSchema.parse(bodyWithImage);
       const newProduct = await this.productService.createProduct(productData);
-      // Normalize Mongoose document to plain object for predictable JSON shape
       const productObj = newProduct.toObject
         ? newProduct.toObject()
         : newProduct;
-      // Ensure kilo_to_price_map is a plain object
-      if (!productObj.kilo_to_price_map) productObj.kilo_to_price_map = {};
-      // NOTE: For creation, keep pieces undefined when not provided to match tests' expectations
-      if (productObj.pieces === null) delete productObj.pieces;
 
+      const enriched = await this.enrichProductWithPricing(productObj);
       res.status(201).json({
         message: "Product created successfully",
-        product: productObj,
+        product: enriched,
       });
     } catch (error: any) {
-      // Prefer using instance check for ZodError; fall back to name check for compatibility
       if (error instanceof z.ZodError || error?.name === "ZodError") {
-        // Special-case missing required category/subcategory to match test expectations
         if (req.body) {
-          if (req.body.subcategory_id === undefined) {
+          const rb: any = req.body as any;
+          const hasSubcat =
+            rb.subcategory_id !== undefined || rb.subcategoryId !== undefined;
+          const hasCat =
+            rb.category_id !== undefined || rb.categoryId !== undefined;
+          if (!hasSubcat) {
             return next(new HttpError(400, "Subcategory ID is required."));
           }
-          if (req.body.category_id === undefined) {
+          if (!hasCat) {
             return next(new HttpError(400, "Category ID is required."));
           }
         }
@@ -67,13 +118,12 @@ export class ProductController {
       const filters = querySchema.parse(req.query);
 
       const products = await this.productService.getAllProducts(filters);
-      // Normalize each product
-      const normalized = products.map((p: any) => {
-        const o = p.toObject ? p.toObject() : p;
-        if (!o.kilo_to_price_map) o.kilo_to_price_map = {};
-        if (o.pieces === undefined) o.pieces = null;
-        return o;
-      });
+      const normalized = await Promise.all(
+        products.map(async (p: any) => {
+          const o = p.toObject ? p.toObject() : p;
+          return await this.enrichProductWithPricing(o);
+        })
+      );
 
       res.status(200).json({
         message: "Products retrieved successfully",
@@ -96,12 +146,10 @@ export class ProductController {
       const id = objectIdSchema.parse(req.params.id);
       const product = await this.productService.getProductById(id);
       const productObj = product.toObject ? product.toObject() : product;
-      if (!productObj.kilo_to_price_map) productObj.kilo_to_price_map = {};
-      if (productObj.pieces === undefined) productObj.pieces = null;
-
+      const enriched = await this.enrichProductWithPricing(productObj);
       res.status(200).json({
         message: "Product retrieved successfully",
-        product: productObj,
+        product: enriched,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError || error?.name === "ZodError") {
@@ -118,7 +166,37 @@ export class ProductController {
   updateProduct = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = objectIdSchema.parse(req.params.id);
-      const updateData = updateProductSchema.parse(req.body);
+      const bodyWithImage = { ...req.body } as any;
+      const r2: any = req;
+      let uploadedFile2: Express.Multer.File | undefined;
+      if (r2.file) uploadedFile2 = r2.file;
+      else if (r2.files) {
+        if (Array.isArray(r2.files.image) && r2.files.image.length)
+          uploadedFile2 = r2.files.image[0];
+        else if (Array.isArray(r2.files.images) && r2.files.images.length)
+          uploadedFile2 = r2.files.images[0];
+      }
+
+      if (uploadedFile2) {
+        bodyWithImage.image_url = `/${uploadedFile2.path.replace(/\\/g, "/")}`;
+      }
+
+      const mapField2 = (from: string, to: string) => {
+        if (
+          bodyWithImage[to] === undefined &&
+          bodyWithImage[from] !== undefined
+        ) {
+          bodyWithImage[to] = bodyWithImage[from];
+        }
+        const rb2: any = req.body as any;
+        if (rb2 && rb2[to] === undefined && rb2[from] !== undefined)
+          rb2[to] = rb2[from];
+      };
+
+      mapField2("categoryId", "category_id");
+      mapField2("subcategoryId", "subcategory_id");
+
+      const updateData = updateProductSchema.parse(bodyWithImage);
 
       const updatedProduct = await this.productService.updateProduct(
         id,
@@ -127,12 +205,10 @@ export class ProductController {
       const productObj = updatedProduct.toObject
         ? updatedProduct.toObject()
         : updatedProduct;
-      if (!productObj.kilo_to_price_map) productObj.kilo_to_price_map = {};
-      if (productObj.pieces === undefined) productObj.pieces = null;
-
+      const enriched = await this.enrichProductWithPricing(productObj);
       res.status(200).json({
         message: "Product updated successfully",
-        product: productObj,
+        product: enriched,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError || error?.name === "ZodError") {
@@ -153,12 +229,10 @@ export class ProductController {
       const productObj = deletedProduct.toObject
         ? deletedProduct.toObject()
         : deletedProduct;
-      if (!productObj.kilo_to_price_map) productObj.kilo_to_price_map = {};
-      if (productObj.pieces === undefined) productObj.pieces = null;
-
+      const enriched = await this.enrichProductWithPricing(productObj);
       res.status(200).json({
         message: "Product deleted successfully",
-        product: productObj,
+        product: enriched,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError || error?.name === "ZodError") {

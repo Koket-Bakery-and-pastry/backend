@@ -5,6 +5,10 @@ export interface ISubcategory extends Document {
   category_id: Types.ObjectId | string;
   name: string;
   status: "available" | "coming_soon";
+  kilo_to_price_map?: Record<string, number> | undefined;
+  upfront_payment?: number;
+  price: number;
+  is_pieceable?: boolean;
   created_at: Date;
 }
 
@@ -23,6 +27,18 @@ const subcategorySchema = new Schema<ISubcategory>({
     type: String,
     enum: ["available", "coming_soon"],
     default: "available",
+  },
+  kilo_to_price_map: {
+    type: Schema.Types.Mixed,
+    default: {},
+  },
+  upfront_payment: {
+    type: Number,
+    required: true,
+  },
+  is_pieceable: { type: Boolean, default: false },
+  price: {
+    type: Number,
   },
   created_at: {
     type: Date,

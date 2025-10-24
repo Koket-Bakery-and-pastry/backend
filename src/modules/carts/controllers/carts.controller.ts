@@ -1,22 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { CartService } from "../services/carts.service";
-import { Http2ServerRequest } from "http2";
+import { AuthRequest } from "../../../core/middlewares/auth.middleware";
 import { HttpError } from "../../../core/errors/HttpError";
 import {
   addToCartSchema,
   updateCartItemSchema,
 } from "../validators/carts.validator";
 import { objectIdSchema } from "../../../core/validators/objectId.validation";
-import { findUserByGoogleId } from "../../auth/repositories/auth.repository";
-
-// Carts controller placeholder.
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    role: string;
-  };
-}
 
 export class CartController {
   private cartService: CartService;
@@ -26,12 +17,12 @@ export class CartController {
   }
 
   addItemToCart = async (
-    req: AuthenticatedRequest,
+    req: AuthRequest,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId?.toString();
       if (!userId) {
         throw new HttpError(401, "Authentication required to manage cart.");
       }
@@ -59,13 +50,9 @@ export class CartController {
     }
   };
 
-  getUserCart = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) => {
+  getUserCart = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId?.toString();
       if (!userId) {
         throw new HttpError(401, "Authentication required to view cart.");
       }
@@ -81,12 +68,12 @@ export class CartController {
   };
 
   updateCartItem = async (
-    req: AuthenticatedRequest,
+    req: AuthRequest,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId?.toString();
       if (!userId) {
         throw new HttpError(401, "Authentication required to update cart.");
       }
@@ -112,12 +99,12 @@ export class CartController {
   };
 
   deteleCartItem = async (
-    req: AuthenticatedRequest,
+    req: AuthRequest,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId?.toString();
       if (!userId) {
         throw new HttpError(
           401,
@@ -145,12 +132,12 @@ export class CartController {
   };
 
   clearUserCart = async (
-    req: AuthenticatedRequest,
+    req: AuthRequest,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId?.toString();
       if (!userId) {
         throw new HttpError(401, "Authentication required to clear cart.");
       }

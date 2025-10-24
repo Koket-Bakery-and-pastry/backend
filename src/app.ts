@@ -17,6 +17,7 @@ function testAuthMiddleware(req: any, res: any, next: any) {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/uploads", express.static("uploads"));
 if (process.env.NODE_ENV === "test") {
   app.use(testAuthMiddleware);
 }

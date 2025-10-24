@@ -21,7 +21,25 @@ export class SubcategoryController {
     next: NextFunction
   ) => {
     try {
-      const subcategoryData = createSubcategorySchema.parse(req.body);
+      const parsed = createSubcategorySchema.parse(req.body);
+      // Normalize kilo_to_price_map keys to strings and values to numbers
+      const subcategoryData: any = { ...parsed };
+      if (parsed.kilo_to_price_map) {
+        const normalized: Record<string, number> = {};
+        Object.entries(parsed.kilo_to_price_map).forEach(([k, v]) => {
+          normalized[String(k)] = Number(v);
+        });
+        subcategoryData.kilo_to_price_map = normalized;
+      }
+      if (parsed.is_pieceable !== undefined) {
+        subcategoryData.is_pieceable = Boolean(parsed.is_pieceable);
+      }
+      // Ensure upfront_payment and price are numbers
+      if (parsed.upfront_payment !== undefined)
+        subcategoryData.upfront_payment = Number(parsed.upfront_payment);
+      if (parsed.price !== undefined)
+        subcategoryData.price = Number(parsed.price);
+
       const newSubcategory = await this.subcategoryService.createSubcategory(
         subcategoryData
       );
@@ -108,7 +126,22 @@ export class SubcategoryController {
   ) => {
     try {
       const id = objectIdSchema.parse(String(req.params.id)); // Validate ID
-      const updateData = updateSubcategorySchema.parse(req.body);
+      const parsedUpdate = updateSubcategorySchema.parse(req.body);
+      const updateData: any = { ...parsedUpdate };
+      if (parsedUpdate.kilo_to_price_map) {
+        const normalized: Record<string, number> = {};
+        Object.entries(parsedUpdate.kilo_to_price_map).forEach(([k, v]) => {
+          normalized[String(k)] = Number(v);
+        });
+        updateData.kilo_to_price_map = normalized;
+      }
+      if (parsedUpdate.is_pieceable !== undefined) {
+        updateData.is_pieceable = Boolean(parsedUpdate.is_pieceable);
+      }
+      if (parsedUpdate.upfront_payment !== undefined)
+        updateData.upfront_payment = Number(parsedUpdate.upfront_payment);
+      if (parsedUpdate.price !== undefined)
+        updateData.price = Number(parsedUpdate.price);
 
       const updatedSubcategory =
         await this.subcategoryService.updateSubcategory(id, updateData);

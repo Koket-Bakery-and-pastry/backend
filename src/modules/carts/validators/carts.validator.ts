@@ -12,6 +12,18 @@ const userIdSchema = z
   .min(1, "User ID is required.")
   .regex(oidRegex, "Invalid MongoDB ObjectId format");
 
+const parseKilo = (val: unknown) => {
+  if (val === undefined || val === null) return undefined;
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    // allow values like "1kg", "2 kg", or just "1"
+    const cleaned = val.replace(/\s*/g, "").toLowerCase();
+    const match = cleaned.match(/^(\d+(?:\.\d+)?)(kg)?$/);
+    if (match) return Number(match[1]);
+  }
+  return val;
+};
+
 const baseCartItemSchema = z.object({
   product_id: productIdSchema,
   quantity: z
@@ -20,7 +32,10 @@ const baseCartItemSchema = z.object({
     .min(1, "Quantity must be at least 1.")
     .optional()
     .default(1),
-  kilo: z.number().positive("Kilo must be a positive number.").optional(),
+  kilo: z.preprocess(
+    parseKilo,
+    z.number().positive("Kilo must be a positive number.").optional()
+  ),
   pieces: z
     .number()
     .int()
