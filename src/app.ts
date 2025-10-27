@@ -5,6 +5,7 @@ import { errorHandler } from "./core/middlewares/error-handler.middleware";
 import { HttpError } from "./core/errors/HttpError";
 import routes from "./routes/v1";
 import openApiDocument from "./docs/openapi";
+import path from "path";
 
 function testAuthMiddleware(req: any, res: any, next: any) {
   const testUserId = req.header("x-test-user-id");
@@ -18,6 +19,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
+app.use(express.static(path.join(__dirname, "public")));
+
 if (process.env.NODE_ENV === "test") {
   app.use(testAuthMiddleware);
 }
