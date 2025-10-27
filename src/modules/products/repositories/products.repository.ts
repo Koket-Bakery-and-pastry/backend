@@ -1,7 +1,5 @@
 import { Types } from "mongoose";
-import Product, {
-  IProduct,
-} from "../../../../src/database/models/product.model";
+import Product, { IProduct } from "../../../database/models/product.model";
 import { CreateProductDto, UpdateProductDto } from "../dtos/products.dto";
 
 export class ProductRepository {
