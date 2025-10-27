@@ -58,11 +58,13 @@ export const createProductSchema = z
         //   return false;
         // }
       }
-    }, "Image URL must be a valid absolute URL or a local uploads path (e.g. /uploads/products/...)."),
-  category_id: objectIdSchema.min(1, "Category ID is required."),
-  subcategory_id: objectIdSchema.min(1, "Subcategory ID is required."),
-  description: z.string().trim().optional(),
-});
+      return true;
+    },
+    {
+      message:
+        "Invalid combination: if is_pieceable is true, 'pieces' must be provided; otherwise 'kilo_to_price_map' must be provided and non-empty.",
+    }
+  );
 
 // Schema for updating an existing product
 export const updateProductSchema = z
