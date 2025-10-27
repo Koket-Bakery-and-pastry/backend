@@ -4,8 +4,8 @@ import {
   updateProductSchema,
 } from "../validators/products.validator";
 import { z } from "zod";
-import { objectIdSchema } from "../../../../src/core/validators/objectId.validation";
-import { HttpError } from "../../../../src/core/errors/HttpError";
+import { objectIdSchema } from "../../../core/validators/objectId.validation";
+import { HttpError } from "../../../core/errors/HttpError";
 import { Request, Response, NextFunction } from "express";
 import { SubcategoryRepository } from "../../catalog/repositories/subcategory.repository";
 
