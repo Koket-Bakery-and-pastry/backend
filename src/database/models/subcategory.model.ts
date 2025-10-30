@@ -6,10 +6,11 @@ export interface ISubcategory extends Document {
   name: string;
   status: "available" | "coming_soon";
   kilo_to_price_map?: Record<string, number> | undefined;
-  upfront_payment?: number;
+  upfront_payment: number;
   price: number;
   is_pieceable?: boolean;
   created_at: Date;
+  updated_at: Date;
 }
 
 const subcategorySchema = new Schema<ISubcategory>({
@@ -41,6 +42,10 @@ const subcategorySchema = new Schema<ISubcategory>({
     type: Number,
   },
   created_at: {
+    type: Date,
+    default: Date.now,
+  },
+  updated_at: {
     type: Date,
     default: Date.now,
   },
