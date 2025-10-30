@@ -1,6 +1,11 @@
-// Import openid-client dynamically to avoid TypeScript import/runtime mismatches across versions
-const OpenIDClient = require("openid-client");
-import * as jwt from "jsonwebtoken";
+// openid-client is an ES module; load it dynamically at runtime and cache the module
+let OpenIDClient: any | null = null;
+async function loadOpenIDClient() {
+  if (OpenIDClient) return OpenIDClient;
+  OpenIDClient = await import("openid-client");
+  return OpenIDClient;
+}
+import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as AuthRepository from "../repositories/auth.repository";
 import {
@@ -23,8 +28,8 @@ class AuthService {
 
   private async getGoogleClient() {
     if (!this.googleClient) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const Issuer = OpenIDClient.Issuer || OpenIDClient.default?.Issuer;
+      const OpenID = await loadOpenIDClient();
+      const Issuer = OpenID.Issuer || OpenID.default?.Issuer;
       if (!Issuer) throw new Error("openid-client Issuer not found");
       const googleIssuer = await Issuer.discover("https://accounts.google.com");
       this.googleClient = new googleIssuer.Client({
@@ -40,8 +45,8 @@ class AuthService {
   // Step 1: Redirect URL
   async getGoogleAuthUrl() {
     const client = await this.getGoogleClient();
-    const generators =
-      OpenIDClient.generators || OpenIDClient.default?.generators;
+    const OpenID = await loadOpenIDClient();
+    const generators = OpenID.generators || OpenID.default?.generators;
     if (!generators) throw new Error("openid-client generators not found");
     const state = generators.state();
     const codeVerifier = generators.codeVerifier();
@@ -94,11 +99,10 @@ class AuthService {
     };
 
     const accessToken = jwt.sign(payload, this.accessSecret, {
-      // cast to any to satisfy @types/jsonwebtoken's StringValue type
-      expiresIn: "15m" as unknown as any,
+      expiresIn: "15m",
     });
     const refreshToken = jwt.sign(payload, this.refreshSecret, {
-      expiresIn: "7d" as unknown as any,
+      expiresIn: "7d",
     });
 
     await AuthRepository.updateRefreshToken(
@@ -161,10 +165,10 @@ class AuthService {
     };
 
     const accessToken = jwt.sign(payload, this.accessSecret, {
-      expiresIn: Env.JWT_EXPIRES_IN as unknown as any,
+      expiresIn: "1h",
     });
     const refreshToken = jwt.sign(payload, this.refreshSecret, {
-      expiresIn: Env.JWT_REFRESH_EXPIRES_IN as unknown as any,
+      expiresIn: "7d",
     });
     user.refresh_token = refreshToken;
 

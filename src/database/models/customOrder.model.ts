@@ -3,8 +3,9 @@ import { Schema, model, Document, Types } from "mongoose";
 export interface ICustomOrder extends Document {
   custom_cake_id: Types.ObjectId;
   user_id: Types.ObjectId;
+  phone_number: string;
   total_price: number;
-  upfront_paid?: number;
+  upfront_paid: number;
   payment_proof_url: string;
   delivery_time: Date;
   status: "pending" | "accepted" | "rejected" | "completed";
@@ -20,8 +21,9 @@ const customOrderSchema = new Schema<ICustomOrder>({
     required: true,
   },
   user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  phone_number: { type: String, required: true },
   total_price: { type: Number, required: true },
-  upfront_paid: { type: Number },
+  upfront_paid: { type: Number, required: true },
   payment_proof_url: { type: String, required: true },
   delivery_time: { type: Date, required: true },
   status: {
