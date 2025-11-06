@@ -30,8 +30,8 @@ const subcategorySchema = new Schema<ISubcategory>({
     default: "available",
   },
   kilo_to_price_map: {
-    type: Schema.Types.Mixed,
-    default: {},
+    type: Object,
+    default: undefined,
   },
   upfront_payment: {
     type: Number,

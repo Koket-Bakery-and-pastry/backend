@@ -23,14 +23,44 @@ export class ProductController {
     try {
       const subcatId = productObj.subcategory_id;
       if (!subcatId) return productObj;
-      const subcat = await this.subcategoryRepository.findById(
-        subcatId.toString ? subcatId.toString() : String(subcatId)
-      );
+
+      // Check if subcategory_id is already populated (object) or just an ID
+      let subcat;
+      if (typeof subcatId === "object" && subcatId._id) {
+        // Already populated - convert to plain object if it's a Mongoose document
+        subcat = subcatId.toObject ? subcatId.toObject() : subcatId;
+      } else {
+        // Need to fetch
+        const fetchedSubcat = await this.subcategoryRepository.findById(
+          subcatId.toString ? subcatId.toString() : String(subcatId)
+        );
+        subcat = fetchedSubcat?.toObject
+          ? fetchedSubcat.toObject()
+          : fetchedSubcat;
+      }
+
       if (!subcat) return productObj;
       const kiloMap = subcat.kilo_to_price_map || {};
       productObj.kilo_to_price_map = kiloMap;
       productObj.upfront_payment = subcat.upfront_payment;
-      productObj.is_pieceable = !kiloMap || Object.keys(kiloMap).length === 0;
+      // Use subcategory's is_pieceable field directly
+      productObj.is_pieceable = subcat.is_pieceable ?? false;
+
+      // Enrich related products if present
+      if (
+        productObj.related_products &&
+        Array.isArray(productObj.related_products)
+      ) {
+        productObj.related_products = await Promise.all(
+          productObj.related_products.map(async (relatedProduct: any) => {
+            const relatedObj = relatedProduct.toObject
+              ? relatedProduct.toObject()
+              : relatedProduct;
+            return await this.enrichProductWithPricing(relatedObj);
+          })
+        );
+      }
+
       return productObj;
     } catch (e) {
       // don't block response if enrichment fails

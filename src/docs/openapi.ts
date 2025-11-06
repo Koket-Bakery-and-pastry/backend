@@ -62,11 +62,11 @@ const openApiDocument = {
       Product: {
         type: "object",
         description: "Product available in the catalog",
-        required: ["name", "categoryId", "subcategoryId"],
+        required: ["name", "category_id", "subcategory_id"],
         properties: {
-          id: {
+          _id: {
             type: "string",
-            description: "Product id (UUID or Mongo ObjectId)",
+            description: "Product id (Mongo ObjectId)",
             example: "64f6ef...",
           },
           name: {
@@ -84,18 +84,66 @@ const openApiDocument = {
             description: "Image URL or local path",
             example: "/uploads/products/chocolate.jpg",
           },
-          categoryId: {
-            type: "string",
-            description: "Parent category id",
-            example: "64f6e0...",
+          category_id: {
+            oneOf: [
+              {
+                type: "string",
+                description: "Category ID reference",
+                example: "64f6e0...",
+              },
+              {
+                $ref: "#/components/schemas/Category",
+                description: "Populated category details",
+              },
+            ],
+            description:
+              "Category reference (ID or populated object when fetching by ID)",
           },
-          subcategoryId: {
-            type: "string",
-            description: "Subcategory id",
-            example: "64f6e1...",
+          subcategory_id: {
+            oneOf: [
+              {
+                type: "string",
+                description: "Subcategory ID reference",
+                example: "64f6e1...",
+              },
+              {
+                $ref: "#/components/schemas/Subcategory",
+                description: "Populated subcategory details",
+              },
+            ],
+            description:
+              "Subcategory reference (ID or populated object when fetching by ID)",
           },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
+          kilo_to_price_map: {
+            type: "object",
+            description: "Weight-to-price mapping inherited from subcategory",
+            additionalProperties: { type: "number" },
+            example: { "0.5kg": 300, "1kg": 550 },
+          },
+          upfront_payment: {
+            type: "number",
+            description: "Upfront payment amount from subcategory",
+            example: 100,
+          },
+          is_pieceable: {
+            type: "boolean",
+            description:
+              "Whether product can be sold by piece (from subcategory)",
+            example: false,
+          },
+          pieces: {
+            type: "integer",
+            description: "Number of pieces (for pieceable products)",
+            example: 12,
+          },
+          related_products: {
+            type: "array",
+            description:
+              "Related products from same subcategory/category (only included when fetching by ID)",
+            items: { $ref: "#/components/schemas/Product" },
+          },
+          created_at: { type: "string", format: "date-time" },
+          updated_at: { type: "string", format: "date-time" },
         },
       },
 
@@ -104,7 +152,7 @@ const openApiDocument = {
         description: "Top-level product category",
         required: ["name"],
         properties: {
-          id: {
+          _id: {
             type: "string",
             description: "Category id",
             example: "64f6e0...",
@@ -119,17 +167,16 @@ const openApiDocument = {
             description: "Optional description",
             example: "Layer cakes and celebration cakes",
           },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
+          created_at: { type: "string", format: "date-time" },
         },
       },
 
       Subcategory: {
         type: "object",
         description: "Category child used to group similar products",
-        required: ["name", "categoryId", "upfront_payment"],
+        required: ["name", "category_id", "upfront_payment"],
         properties: {
-          id: {
+          _id: {
             type: "string",
             description: "Subcategory id",
             example: "64f6e1...",
@@ -139,7 +186,7 @@ const openApiDocument = {
             description: "Subcategory name",
             example: "Birthday Cakes",
           },
-          categoryId: {
+          category_id: {
             type: "string",
             description: "Parent category id (ref)",
             example: "64f6e0...",
@@ -157,46 +204,45 @@ const openApiDocument = {
               type: "number",
               minimum: 0,
             },
-            example: { "1-2": 50, "3-5": 100 },
+            example: { "0.5kg": 300, "1kg": 550 },
           },
           upfront_payment: {
             type: "number",
             minimum: 0,
             description: "Upfront payment amount",
-            example: 20,
+            example: 100,
           },
           is_pieceable: {
             type: "boolean",
             description: "Whether the subcategory can be sold by piece",
-            example: true,
+            example: false,
           },
           price: {
             type: "number",
             minimum: 0,
             description: "Base price for the subcategory",
-            example: 30,
+            example: 250,
           },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
+          created_at: { type: "string", format: "date-time" },
         },
       },
 
       CartItem: {
         type: "object",
         description: "An item inside a user's cart",
-        required: ["productId", "quantity"],
+        required: ["product_id", "quantity"],
         properties: {
-          id: {
+          _id: {
             type: "string",
             description: "Cart item id",
             example: "64f6f2...",
           },
-          userId: {
+          user_id: {
             type: "string",
             description: "User id",
             example: "64f69a...",
           },
-          productId: {
+          product_id: {
             type: "string",
             description: "Referenced product id",
             example: "64f6ef...",
@@ -217,36 +263,36 @@ const openApiDocument = {
             example: 2,
             minimum: 1,
           },
-          customText: {
+          custom_text: {
             type: "string",
             description: "Custom text",
             example: "Happy Birthday",
           },
-          additionalDescription: {
+          additional_description: {
             type: "string",
             description: "Additional description",
             example: "No nuts",
           },
-          createdAt: { type: "string", format: "date-time" },
+          created_at: { type: "string", format: "date-time" },
         },
       },
 
       ProductReview: {
         type: "object",
         description: "A review left by a user for a product",
-        required: ["productId", "rating"],
+        required: ["product_id", "rating"],
         properties: {
-          id: {
+          _id: {
             type: "string",
             description: "Review id",
             example: "64f701...",
           },
-          productId: {
+          product_id: {
             type: "string",
             description: "Reviewed product id",
             example: "64f6ef...",
           },
-          userId: {
+          user_id: {
             type: "string",
             description: "Author user id",
             example: "64f69a...",
@@ -263,7 +309,7 @@ const openApiDocument = {
             description: "Full review text",
             example: "The cake was moist and the frosting was perfect.",
           },
-          createdAt: { type: "string", format: "date-time" },
+          created_at: { type: "string", format: "date-time" },
         },
       },
 
@@ -833,6 +879,9 @@ const openApiDocument = {
 
         summary: "Get product by id",
 
+        description:
+          "Returns product with populated category/subcategory details and related products",
+
         parameters: [
           {
             name: "id",
@@ -852,6 +901,71 @@ const openApiDocument = {
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ProductResponse" },
+                example: {
+                  message: "Product retrieved successfully",
+                  product: {
+                    _id: "64f6ef...",
+                    name: "Chocolate Cake",
+                    description: "Rich chocolate cake",
+                    image_url: "/uploads/products/chocolate.jpg",
+                    category_id: {
+                      _id: "64f6ea...",
+                      name: "Cakes",
+                      description: "Various cakes",
+                      created_at: "2023-09-05T10:00:00.000Z",
+                    },
+                    subcategory_id: {
+                      _id: "64f6ec...",
+                      name: "Chocolate Cakes",
+                      category_id: "64f6ea...",
+                      kilo_to_price_map: {
+                        "1": 500,
+                        "2": 950,
+                      },
+                      pricing: "per_kilo",
+                      created_at: "2023-09-05T10:05:00.000Z",
+                    },
+                    kilo_to_price_map: {
+                      "1": 500,
+                      "2": 950,
+                    },
+                    pricing: "per_kilo",
+                    stock: 10,
+                    created_at: "2023-09-05T10:10:00.000Z",
+                    related_products: [
+                      {
+                        _id: "64f6f0...",
+                        name: "Dark Chocolate Cake",
+                        description: "Extra dark chocolate",
+                        image_url: "/uploads/products/dark-choco.jpg",
+                        category_id: {
+                          _id: "64f6ea...",
+                          name: "Cakes",
+                          description: "Various cakes",
+                          created_at: "2023-09-05T10:00:00.000Z",
+                        },
+                        subcategory_id: {
+                          _id: "64f6ec...",
+                          name: "Chocolate Cakes",
+                          category_id: "64f6ea...",
+                          kilo_to_price_map: {
+                            "1": 600,
+                            "2": 1100,
+                          },
+                          pricing: "per_kilo",
+                          created_at: "2023-09-05T10:05:00.000Z",
+                        },
+                        kilo_to_price_map: {
+                          "1": 600,
+                          "2": 1100,
+                        },
+                        pricing: "per_kilo",
+                        stock: 5,
+                        created_at: "2023-09-05T10:12:00.000Z",
+                      },
+                    ],
+                  },
+                },
               },
             },
           },

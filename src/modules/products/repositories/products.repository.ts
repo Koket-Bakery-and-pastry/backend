@@ -28,7 +28,29 @@ export class ProductRepository {
   }
 
   async findById(id: string): Promise<IProduct | null> {
-    return Product.findById(id);
+    return Product.findById(id)
+      .populate("category_id")
+      .populate("subcategory_id");
+  }
+
+  async findRelatedProducts(
+    productId: string,
+    categoryId: string,
+    subcategoryId: string,
+    limit: number = 6
+  ): Promise<IProduct[]> {
+    // Find products in same subcategory first, then same category
+    return Product.find({
+      _id: { $ne: new Types.ObjectId(productId) },
+      $or: [
+        { subcategory_id: new Types.ObjectId(subcategoryId) },
+        { category_id: new Types.ObjectId(categoryId) },
+      ],
+    })
+      .populate("category_id")
+      .populate("subcategory_id")
+      .limit(limit)
+      .exec();
   }
   async findByNameAndCategoryAndSubcategory(
     name: string,
@@ -52,7 +74,9 @@ export class ProductRepository {
       updatePayload.subcategory_id = new Types.ObjectId(data.subcategory_id);
     }
 
-    return Product.findByIdAndUpdate(id, updatePayload, { new: true });
+    return Product.findByIdAndUpdate(id, updatePayload, { new: true })
+      .populate("category_id")
+      .populate("subcategory_id");
   }
 
   async delete(id: string): Promise<IProduct | null> {
