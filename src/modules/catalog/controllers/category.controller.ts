@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Category from "../../../database/models/category.model";
+import { CategoryService } from "../services/category.service";
 
 // Helper to check for valid MongoDB ObjectId
 const isValidObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
@@ -28,8 +29,9 @@ export const createCategory = async (req: Request, res: Response) => {
 };
 
 export const getAllCategories = async (_req: Request, res: Response) => {
+  const categoryService = new CategoryService();
   try {
-    const categories = await Category.find();
+    const categories = await categoryService.getAllCategories();
     return res.status(200).json({
       message: "Categories retrieved successfully",
       categories,
