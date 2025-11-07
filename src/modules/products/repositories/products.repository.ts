@@ -7,6 +7,8 @@ export class ProductRepository {
     const payload: any = { ...data };
     const product = new Product(payload);
     await product.save();
+    await product.populate("category_id");
+    await product.populate("subcategory_id");
     return product;
   }
 
@@ -24,7 +26,9 @@ export class ProductRepository {
     if (filters?.subcategoryId) {
       query.subcategory_id = new Types.ObjectId(filters.subcategoryId);
     }
-    return Product.find(query);
+    return Product.find(query)
+      .populate("category_id")
+      .populate("subcategory_id");
   }
 
   async findById(id: string): Promise<IProduct | null> {
@@ -39,7 +43,6 @@ export class ProductRepository {
     subcategoryId: string,
     limit: number = 6
   ): Promise<IProduct[]> {
-    // Find products in same subcategory first, then same category
     return Product.find({
       _id: { $ne: new Types.ObjectId(productId) },
       $or: [
@@ -80,6 +83,11 @@ export class ProductRepository {
   }
 
   async delete(id: string): Promise<IProduct | null> {
-    return Product.findByIdAndDelete(id);
+    const product = await Product.findByIdAndDelete(id);
+    if (product) {
+      await product.populate("category_id");
+      await product.populate("subcategory_id");
+    }
+    return product;
   }
 }

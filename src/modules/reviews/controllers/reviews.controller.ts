@@ -28,6 +28,25 @@ export class ProductReviewController {
     this.productReviewService = new ProductReviewService();
   }
 
+  // Enrich review's product with pricing info from subcategory
+  private enrichReviewWithProductPricing(review: any): any {
+    const reviewObj = review.toObject ? review.toObject() : review;
+
+    if (reviewObj.product_id && typeof reviewObj.product_id === "object") {
+      const product = reviewObj.product_id;
+      const subcat = product.subcategory_id;
+
+      if (subcat && typeof subcat === "object") {
+        // Add pricing fields to product for backward compatibility
+        product.kilo_to_price_map = subcat.kilo_to_price_map || {};
+        product.upfront_payment = subcat.upfront_payment;
+        product.is_pieceable = subcat.is_pieceable ?? false;
+      }
+    }
+
+    return reviewObj;
+  }
+
   createOrUpdateProductReview = async (
     req: Request,
     res: Response,
@@ -37,9 +56,10 @@ export class ProductReviewController {
       const reviewData = createProductReviewSchema.parse(req.body);
       const review =
         await this.productReviewService.createOrUpdateProductReview(reviewData);
+      const enriched = this.enrichReviewWithProductPricing(review);
       res.status(201).json({
         message: "Product review created/updated successfully",
-        review: review,
+        review: enriched,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError || error?.name === "ZodError") {
@@ -69,9 +89,12 @@ export class ProductReviewController {
       const reviews = await this.productReviewService.getAllProductReviews(
         filters
       );
+      const enriched = reviews.map((review) =>
+        this.enrichReviewWithProductPricing(review)
+      );
       res.status(200).json({
         message: "Product reviews fetched successfully",
-        reviews: reviews,
+        reviews: enriched,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError || error?.name === "ZodError") {
@@ -92,9 +115,10 @@ export class ProductReviewController {
     try {
       const id = objectIdSchema.parse(req.params.id);
       const review = await this.productReviewService.getProductReviewById(id);
+      const enriched = this.enrichReviewWithProductPricing(review);
       res.status(200).json({
         message: "Product review fetched successfully",
-        review: review,
+        review: enriched,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError || error?.name === "ZodError") {
@@ -119,9 +143,10 @@ export class ProductReviewController {
         id,
         updateData
       );
+      const enriched = this.enrichReviewWithProductPricing(updatedReview);
       res.status(200).json({
         message: "Product review updated successfully",
-        review: updatedReview,
+        review: enriched,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError || error?.name === "ZodError") {
