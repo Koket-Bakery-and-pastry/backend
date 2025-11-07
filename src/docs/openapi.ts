@@ -4,7 +4,7 @@ const openApiDocument = {
     title: "Koket Bakery API",
     version: "1.0.0",
     description:
-      "API documentation for carts, catalog, products, reviews and users",
+      "API documentation for users, products, catalog, reviews, carts, orders, payments, notifications, analytics, and custom orders",
   },
   servers: [
     {
@@ -18,6 +18,11 @@ const openApiDocument = {
     { name: "Subcategories", description: "Subcategory management" },
     { name: "Reviews", description: "Product reviews and ratings" },
     { name: "Carts", description: "Shopping cart operations" },
+    { name: "Orders", description: "Order management" },
+    { name: "Payments", description: "Payment processing" },
+    { name: "Notifications", description: "Notification management" },
+    { name: "Analytics", description: "Analytics and reporting" },
+    { name: "Custom Orders", description: "Custom order management" },
   ],
   components: {
     securitySchemes: {
@@ -57,11 +62,11 @@ const openApiDocument = {
       Product: {
         type: "object",
         description: "Product available in the catalog",
-        required: ["name", "price", "categoryId"],
+        required: ["name", "category_id", "subcategory_id"],
         properties: {
-          id: {
+          _id: {
             type: "string",
-            description: "Product id (UUID or Mongo ObjectId)",
+            description: "Product id (Mongo ObjectId)",
             example: "64f6ef...",
           },
           name: {
@@ -74,48 +79,71 @@ const openApiDocument = {
             description: "Detailed description",
             example: "Rich chocolate cake with fudge frosting",
           },
-          price: {
+          image_url: {
+            type: "string",
+            description: "Image URL or local path",
+            example: "/uploads/products/chocolate.jpg",
+          },
+          category_id: {
+            oneOf: [
+              {
+                type: "string",
+                description: "Category ID reference",
+                example: "64f6e0...",
+              },
+              {
+                $ref: "#/components/schemas/Category",
+                description: "Populated category details",
+              },
+            ],
+            description:
+              "Category reference (ID or populated object when fetching by ID)",
+          },
+          subcategory_id: {
+            oneOf: [
+              {
+                type: "string",
+                description: "Subcategory ID reference",
+                example: "64f6e1...",
+              },
+              {
+                $ref: "#/components/schemas/Subcategory",
+                description: "Populated subcategory details",
+              },
+            ],
+            description:
+              "Subcategory reference (ID or populated object when fetching by ID)",
+          },
+          kilo_to_price_map: {
+            type: "object",
+            description: "Weight-to-price mapping inherited from subcategory",
+            additionalProperties: { type: "number" },
+            example: { "0.5kg": 300, "1kg": 550 },
+          },
+          upfront_payment: {
             type: "number",
-            format: "float",
-            description: "Unit price in local currency",
-            example: 25.5,
+            description: "Upfront payment amount from subcategory",
+            example: 100,
           },
-          sku: {
-            type: "string",
-            description: "Stock keeping unit (optional)",
-            example: "CK-CHOC-001",
+          is_pieceable: {
+            type: "boolean",
+            description:
+              "Whether product can be sold by piece (from subcategory)",
+            example: false,
           },
-          categoryId: {
-            type: "string",
-            description: "Parent category id",
-            example: "64f6e0...",
-          },
-          subcategoryId: {
-            type: "string",
-            description: "Optional subcategory id",
-            example: "64f6e1...",
-          },
-          images: {
-            type: "array",
-            description: "Array of image URLs",
-            items: {
-              type: "string",
-              format: "uri",
-              example: "https://cdn.example.com/images/1.jpg",
-            },
-          },
-          stock: {
+          pieces: {
             type: "integer",
-            description: "Available stock quantity",
+            description: "Number of pieces (for pieceable products)",
             example: 12,
           },
-          isActive: {
-            type: "boolean",
-            description: "If false the product is hidden from customers",
-            example: true,
+          related_products: {
+            type: "array",
+            description:
+              "Related products from same subcategory/category (only included when fetching by ID)",
+            items: { $ref: "#/components/schemas/Product" },
           },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
+          created_at: { type: "string", format: "date-time" },
+          updated_at: { type: "string", format: "date-time" },
         },
       },
 
@@ -124,7 +152,7 @@ const openApiDocument = {
         description: "Top-level product category",
         required: ["name"],
         properties: {
-          id: {
+          _id: {
             type: "string",
             description: "Category id",
             example: "64f6e0...",
@@ -139,17 +167,16 @@ const openApiDocument = {
             description: "Optional description",
             example: "Layer cakes and celebration cakes",
           },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
+          created_at: { type: "string", format: "date-time" },
         },
       },
 
       Subcategory: {
         type: "object",
         description: "Category child used to group similar products",
-        required: ["name", "categoryId"],
+        required: ["name", "category_id", "upfront_payment"],
         properties: {
-          id: {
+          _id: {
             type: "string",
             description: "Subcategory id",
             example: "64f6e1...",
@@ -159,30 +186,76 @@ const openApiDocument = {
             description: "Subcategory name",
             example: "Birthday Cakes",
           },
-          categoryId: {
+          category_id: {
             type: "string",
             description: "Parent category id (ref)",
             example: "64f6e0...",
           },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
+          status: {
+            type: "string",
+            enum: ["available", "coming_soon"],
+            description: "Subcategory availability status",
+            example: "available",
+          },
+          kilo_to_price_map: {
+            type: "object",
+            description: "Mapping of kilo ranges to prices",
+            additionalProperties: {
+              type: "number",
+              minimum: 0,
+            },
+            example: { "0.5kg": 300, "1kg": 550 },
+          },
+          upfront_payment: {
+            type: "number",
+            minimum: 0,
+            description: "Upfront payment amount",
+            example: 100,
+          },
+          is_pieceable: {
+            type: "boolean",
+            description: "Whether the subcategory can be sold by piece",
+            example: false,
+          },
+          price: {
+            type: "number",
+            minimum: 0,
+            description: "Base price for the subcategory",
+            example: 250,
+          },
+          created_at: { type: "string", format: "date-time" },
         },
       },
 
       CartItem: {
         type: "object",
         description: "An item inside a user's cart",
-        required: ["productId", "quantity"],
+        required: ["product_id", "quantity"],
         properties: {
-          id: {
+          _id: {
             type: "string",
             description: "Cart item id",
             example: "64f6f2...",
           },
-          productId: {
+          user_id: {
+            type: "string",
+            description: "User id",
+            example: "64f69a...",
+          },
+          product_id: {
             type: "string",
             description: "Referenced product id",
             example: "64f6ef...",
+          },
+          kilo: {
+            type: "number",
+            description: "Kilo quantity",
+            example: 2.5,
+          },
+          pieces: {
+            type: "integer",
+            description: "Pieces quantity",
+            example: 1,
           },
           quantity: {
             type: "integer",
@@ -190,43 +263,36 @@ const openApiDocument = {
             example: 2,
             minimum: 1,
           },
-          unitPrice: {
-            type: "number",
-            format: "float",
-            description: "Price per unit at time of adding",
-            example: 25.5,
-          },
-          totalPrice: {
-            type: "number",
-            format: "float",
-            description: "Computed total price (unitPrice * quantity)",
-            example: 51.0,
-          },
-          notes: {
+          custom_text: {
             type: "string",
-            description: "Optional notes for custom orders",
+            description: "Custom text",
+            example: "Happy Birthday",
+          },
+          additional_description: {
+            type: "string",
+            description: "Additional description",
             example: "No nuts",
           },
-          addedAt: { type: "string", format: "date-time" },
+          created_at: { type: "string", format: "date-time" },
         },
       },
 
       ProductReview: {
         type: "object",
         description: "A review left by a user for a product",
-        required: ["productId", "rating"],
+        required: ["product_id", "rating"],
         properties: {
-          id: {
+          _id: {
             type: "string",
             description: "Review id",
             example: "64f701...",
           },
-          productId: {
+          product_id: {
             type: "string",
             description: "Reviewed product id",
             example: "64f6ef...",
           },
-          userId: {
+          user_id: {
             type: "string",
             description: "Author user id",
             example: "64f69a...",
@@ -238,18 +304,12 @@ const openApiDocument = {
             description: "Integer rating from 1 to 5",
             example: 5,
           },
-          title: {
-            type: "string",
-            description: "Short headline",
-            example: "Delicious",
-          },
           comment: {
             type: "string",
             description: "Full review text",
             example: "The cake was moist and the frosting was perfect.",
           },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
+          created_at: { type: "string", format: "date-time" },
         },
       },
 
@@ -376,11 +436,187 @@ const openApiDocument = {
           },
         },
       },
+
+      OrderResponse: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          order: { $ref: "#/components/schemas/Order" },
+        },
+      },
+      OrdersListResponse: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          orders: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Order" },
+          },
+        },
+      },
+
+      CustomOrderResponse: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          customOrder: { $ref: "#/components/schemas/CustomOrder" },
+        },
+      },
+      CustomOrdersListResponse: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          customOrders: {
+            type: "array",
+            items: { $ref: "#/components/schemas/CustomOrder" },
+          },
+        },
+      },
+
       MessageResponse: {
         type: "object",
         properties: { message: { type: "string" } },
       },
     },
+  },
+  Order: {
+    type: "object",
+    description: "An order placed by a user",
+    required: [
+      "orderItems",
+      "userId",
+      "phoneNumber",
+      "totalPrice",
+      "upfrontPaid",
+      "deliveryTime",
+      "status",
+    ],
+    properties: {
+      id: {
+        type: "string",
+        description: "Order id",
+        example: "64f702...",
+      },
+      orderItems: {
+        type: "array",
+        description: "Array of order item ids",
+        items: { type: "string" },
+        example: ["64f703...", "64f704..."],
+      },
+      userId: {
+        type: "string",
+        description: "User id",
+        example: "64f69a...",
+      },
+      phoneNumber: {
+        type: "string",
+        description: "Phone number",
+        example: "+1234567890",
+      },
+      totalPrice: {
+        type: "number",
+        description: "Total price",
+        example: 100.0,
+      },
+      upfrontPaid: {
+        type: "number",
+        description: "Upfront payment",
+        example: 20.0,
+      },
+      paymentProofUrl: {
+        type: "string",
+        description: "Payment proof URL",
+        example: "/uploads/payments/proof.jpg",
+      },
+      deliveryTime: {
+        type: "string",
+        format: "date-time",
+        description: "Delivery time",
+        example: "2023-10-05T14:00:00.000Z",
+      },
+      status: {
+        type: "string",
+        enum: ["pending", "accepted", "rejected", "completed"],
+        description: "Order status",
+        example: "pending",
+      },
+      rejectionComment: {
+        type: "string",
+        description: "Rejection comment",
+        example: "Out of stock",
+      },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+  },
+
+  CustomOrder: {
+    type: "object",
+    description: "A custom order for a custom cake",
+    required: [
+      "customCakeId",
+      "userId",
+      "totalPrice",
+      "paymentProofUrl",
+      "deliveryTime",
+      "status",
+    ],
+    properties: {
+      id: {
+        type: "string",
+        description: "Custom order id",
+        example: "64f705...",
+      },
+      customCakeId: {
+        type: "string",
+        description: "Custom cake id",
+        example: "64f706...",
+      },
+      userId: {
+        type: "string",
+        description: "User id",
+        example: "64f69a...",
+      },
+      totalPrice: {
+        type: "number",
+        description: "Total price",
+        example: 150.0,
+      },
+      upfrontPaid: {
+        type: "number",
+        description: "Upfront payment",
+        example: 30.0,
+      },
+      paymentProofUrl: {
+        type: "string",
+        description: "Payment proof URL",
+        example: "/uploads/payments/proof.jpg",
+      },
+      deliveryTime: {
+        type: "string",
+        format: "date-time",
+        description: "Delivery time",
+        example: "2023-10-05T14:00:00.000Z",
+      },
+      status: {
+        type: "string",
+        enum: ["pending", "accepted", "rejected", "completed"],
+        description: "Order status",
+        example: "pending",
+      },
+      rejectionComment: {
+        type: "string",
+        description: "Rejection comment",
+        example: "Design not feasible",
+      },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+  },
+
+  MessageResponse: {
+    type: "object",
+    properties: { message: { type: "string" } },
   },
   paths: {
     "/users/register": {
@@ -437,13 +673,17 @@ const openApiDocument = {
     "/auth/login": {
       post: {
         tags: ["Users"],
+
         summary: "Authenticate user and return tokens",
+
         requestBody: {
           required: true,
+
           content: {
             "application/json": {
               schema: {
                 type: "object",
+
                 properties: {
                   email: { type: "string", format: "email" },
                   password: { type: "string" },
@@ -455,6 +695,7 @@ const openApiDocument = {
         responses: {
           "200": {
             description: "Auth success",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/AuthResponse" },
@@ -469,13 +710,17 @@ const openApiDocument = {
     "/auth/refresh": {
       post: {
         tags: ["Users"],
+
         summary: "Refresh tokens using refresh token",
+
         requestBody: {
           required: true,
+
           content: {
             "application/json": {
               schema: {
                 type: "object",
+
                 properties: { refreshToken: { type: "string" } },
               },
             },
@@ -484,6 +729,7 @@ const openApiDocument = {
         responses: {
           "200": {
             description: "New tokens",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/AuthResponse" },
@@ -497,7 +743,9 @@ const openApiDocument = {
     "/auth/google": {
       get: {
         tags: ["Users"],
+
         summary: "Start Google OAuth (redirect)",
+
         responses: { "302": { description: "Redirect to Google" } },
       },
     },
@@ -505,10 +753,13 @@ const openApiDocument = {
     "/auth/google/callback": {
       get: {
         tags: ["Users"],
+
         summary: "Google OAuth callback",
+
         responses: {
           "200": {
             description: "OAuth callback returns tokens/user info",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/AuthResponse" },
@@ -522,25 +773,29 @@ const openApiDocument = {
     "/products": {
       post: {
         tags: ["Products"],
+
         summary: "Create a product",
+
         requestBody: {
           required: true,
+
           content: {
             "application/json": {
               schema: { $ref: "#/components/schemas/Product" },
               example: {
                 name: "Chocolate Fudge Cake",
+
                 description: "Rich chocolate cake with fudge",
-                price: 25.5,
+
                 categoryId: "64f6e0...",
+
                 subcategoryId: "64f6e1...",
-                images: ["https://cdn.example.com/images/1.jpg"],
-                stock: 10,
               },
             },
             "multipart/form-data": {
               schema: {
                 type: "object",
+
                 properties: {
                   name: { type: "string" },
                   description: { type: "string" },
@@ -550,6 +805,7 @@ const openApiDocument = {
                   image: { type: "string", format: "binary" },
                   images: {
                     type: "array",
+
                     items: { type: "string", format: "binary" },
                   },
                   stock: { type: "integer" },
@@ -561,6 +817,7 @@ const openApiDocument = {
         responses: {
           "201": {
             description: "Created",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ProductResponse" },
@@ -572,24 +829,41 @@ const openApiDocument = {
       },
       get: {
         tags: ["Products"],
+
         summary: "Get all products",
+
         parameters: [
           { name: "categoryId", in: "query", schema: { type: "string" } },
           { name: "subcategoryId", in: "query", schema: { type: "string" } },
         ],
+
         responses: {
           "200": {
             description: "OK",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ProductsListResponse" },
                 example: {
                   message: "Products retrieved successfully",
+
                   products: [
                     {
                       id: "64f6ef...",
+
                       name: "Chocolate Fudge Cake",
-                      price: 25.5,
+
+                      description: "Rich chocolate cake with fudge",
+
+                      image_url: "/uploads/products/chocolate.jpg",
+
+                      categoryId: "64f6e0...",
+
+                      subcategoryId: "64f6e1...",
+
+                      createdAt: "2023-10-01T00:00:00.000Z",
+
+                      updatedAt: "2023-10-01T00:00:00.000Z",
                     },
                   ],
                 },
@@ -602,21 +876,96 @@ const openApiDocument = {
     "/products/{id}": {
       get: {
         tags: ["Products"],
+
         summary: "Get product by id",
+
+        description:
+          "Returns product with populated category/subcategory details and related products",
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: {
           "200": {
             description: "OK",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ProductResponse" },
+                example: {
+                  message: "Product retrieved successfully",
+                  product: {
+                    _id: "64f6ef...",
+                    name: "Chocolate Cake",
+                    description: "Rich chocolate cake",
+                    image_url: "/uploads/products/chocolate.jpg",
+                    category_id: {
+                      _id: "64f6ea...",
+                      name: "Cakes",
+                      description: "Various cakes",
+                      created_at: "2023-09-05T10:00:00.000Z",
+                    },
+                    subcategory_id: {
+                      _id: "64f6ec...",
+                      name: "Chocolate Cakes",
+                      category_id: "64f6ea...",
+                      kilo_to_price_map: {
+                        "1": 500,
+                        "2": 950,
+                      },
+                      pricing: "per_kilo",
+                      created_at: "2023-09-05T10:05:00.000Z",
+                    },
+                    kilo_to_price_map: {
+                      "1": 500,
+                      "2": 950,
+                    },
+                    pricing: "per_kilo",
+                    stock: 10,
+                    created_at: "2023-09-05T10:10:00.000Z",
+                    related_products: [
+                      {
+                        _id: "64f6f0...",
+                        name: "Dark Chocolate Cake",
+                        description: "Extra dark chocolate",
+                        image_url: "/uploads/products/dark-choco.jpg",
+                        category_id: {
+                          _id: "64f6ea...",
+                          name: "Cakes",
+                          description: "Various cakes",
+                          created_at: "2023-09-05T10:00:00.000Z",
+                        },
+                        subcategory_id: {
+                          _id: "64f6ec...",
+                          name: "Chocolate Cakes",
+                          category_id: "64f6ea...",
+                          kilo_to_price_map: {
+                            "1": 600,
+                            "2": 1100,
+                          },
+                          pricing: "per_kilo",
+                          created_at: "2023-09-05T10:05:00.000Z",
+                        },
+                        kilo_to_price_map: {
+                          "1": 600,
+                          "2": 1100,
+                        },
+                        pricing: "per_kilo",
+                        stock: 5,
+                        created_at: "2023-09-05T10:12:00.000Z",
+                      },
+                    ],
+                  },
+                },
               },
             },
           },
@@ -626,15 +975,21 @@ const openApiDocument = {
       },
       put: {
         tags: ["Products"],
+
         summary: "Update product",
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         requestBody: {
           content: {
             "application/json": {
@@ -643,6 +998,7 @@ const openApiDocument = {
             "multipart/form-data": {
               schema: {
                 type: "object",
+
                 properties: {
                   name: { type: "string" },
                   description: { type: "string" },
@@ -652,6 +1008,7 @@ const openApiDocument = {
                   image: { type: "string", format: "binary" },
                   images: {
                     type: "array",
+
                     items: { type: "string", format: "binary" },
                   },
                   stock: { type: "integer" },
@@ -663,6 +1020,7 @@ const openApiDocument = {
         responses: {
           "200": {
             description: "Updated",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ProductResponse" },
@@ -675,18 +1033,25 @@ const openApiDocument = {
       },
       delete: {
         tags: ["Products"],
+
         summary: "Delete product",
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: {
           "200": {
             description: "Deleted",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ProductResponse" },
@@ -701,8 +1066,11 @@ const openApiDocument = {
     "/categories": {
       post: {
         tags: ["Categories"],
+
         summary: "Create a category",
+
         security: [{ bearerAuth: [] }],
+
         requestBody: {
           content: {
             "application/json": {
@@ -713,6 +1081,7 @@ const openApiDocument = {
         responses: {
           "201": {
             description: "Created",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/CategoryResponse" },
@@ -723,15 +1092,19 @@ const openApiDocument = {
       },
       get: {
         tags: ["Categories"],
+
         summary: "Get all categories",
+
         responses: {
           "200": {
             description: "OK",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/CategoriesListResponse" },
                 example: {
                   message: "Categories retrieved successfully",
+
                   categories: [{ id: "64f6e0...", name: "Cakes" }],
                 },
               },
@@ -743,15 +1116,21 @@ const openApiDocument = {
     "/categories/{id}": {
       get: {
         tags: ["Categories"],
+
         summary: "Get category by id",
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: {
           "200": { description: "OK" },
           "404": { description: "Not found" },
@@ -759,16 +1138,23 @@ const openApiDocument = {
       },
       put: {
         tags: ["Categories"],
+
         summary: "Update category",
+
         security: [{ bearerAuth: [] }],
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         requestBody: {
           content: {
             "application/json": {
@@ -780,19 +1166,27 @@ const openApiDocument = {
       },
       delete: {
         tags: ["Categories"],
+
         summary: "Delete category",
+
         security: [{ bearerAuth: [] }],
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: {
           "200": {
             description: "Deleted",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/CategoryResponse" },
@@ -806,8 +1200,11 @@ const openApiDocument = {
     "/subcategories": {
       post: {
         tags: ["Subcategories"],
+
         summary: "Create a subcategory",
+
         security: [{ bearerAuth: [] }],
+
         requestBody: {
           content: {
             "application/json": {
@@ -818,6 +1215,7 @@ const openApiDocument = {
         responses: {
           "201": {
             description: "Created",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/SubcategoryResponse" },
@@ -828,13 +1226,17 @@ const openApiDocument = {
       },
       get: {
         tags: ["Subcategories"],
+
         summary: "Get all subcategories",
+
         parameters: [
           { name: "categoryId", in: "query", schema: { type: "string" } },
         ],
+
         responses: {
           "200": {
             description: "OK",
+
             content: {
               "application/json": {
                 schema: {
@@ -842,11 +1244,27 @@ const openApiDocument = {
                 },
                 example: {
                   message: "Subcategories retrieved successfully",
+
                   subcategories: [
                     {
                       id: "64f6e1...",
+
                       name: "Birthday Cakes",
+
                       categoryId: "64f6e0...",
+
+                      status: "available",
+
+                      kilo_to_price_map: { "1-2": 50, "3-5": 100 },
+                      upfront_payment: 20,
+
+                      is_pieceable: true,
+
+                      price: 30,
+
+                      createdAt: "2023-10-01T00:00:00.000Z",
+
+                      updatedAt: "2023-10-01T00:00:00.000Z",
                     },
                   ],
                 },
@@ -859,32 +1277,77 @@ const openApiDocument = {
     "/subcategories/{id}": {
       get: {
         tags: ["Subcategories"],
+
         summary: "Get subcategory by id",
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: {
-          "200": { description: "OK" },
+          "200": {
+            description: "OK",
+
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/SubcategoryResponse" },
+                example: {
+                  message: "Subcategory retrieved successfully",
+
+                  subcategory: {
+                    id: "64f6e1...",
+
+                    name: "Birthday Cakes",
+
+                    categoryId: "64f6e0...",
+
+                    status: "available",
+
+                    kilo_to_price_map: { "1-2": 50, "3-5": 100 },
+                    upfront_payment: 20,
+
+                    is_pieceable: true,
+
+                    price: 30,
+
+                    createdAt: "2023-10-01T00:00:00.000Z",
+
+                    updatedAt: "2023-10-01T00:00:00.000Z",
+                  },
+                },
+              },
+            },
+          },
           "404": { description: "Not found" },
         },
       },
       put: {
         tags: ["Subcategories"],
+
         summary: "Update subcategory",
+
         security: [{ bearerAuth: [] }],
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         requestBody: {
           content: {
             "application/json": {
@@ -896,19 +1359,27 @@ const openApiDocument = {
       },
       delete: {
         tags: ["Subcategories"],
+
         summary: "Delete subcategory",
+
         security: [{ bearerAuth: [] }],
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: {
           "200": {
             description: "Deleted",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/SubcategoryResponse" },
@@ -922,8 +1393,11 @@ const openApiDocument = {
     "/reviews": {
       post: {
         tags: ["Reviews"],
+
         summary: "Create or update a product review",
+
         security: [{ bearerAuth: [] }],
+
         requestBody: {
           content: {
             "application/json": {
@@ -934,6 +1408,7 @@ const openApiDocument = {
         responses: {
           "201": {
             description: "Created/Updated",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ProductReviewResponse" },
@@ -944,14 +1419,18 @@ const openApiDocument = {
       },
       get: {
         tags: ["Reviews"],
+
         summary: "Get product reviews",
+
         parameters: [
           { name: "productId", in: "query", schema: { type: "string" } },
           { name: "userId", in: "query", schema: { type: "string" } },
         ],
+
         responses: {
           "200": {
             description: "OK",
+
             content: {
               "application/json": {
                 schema: {
@@ -959,12 +1438,17 @@ const openApiDocument = {
                 },
                 example: {
                   message: "Product reviews fetched successfully",
+
                   reviews: [
                     {
                       id: "64f701...",
+
                       productId: "64f6ef...",
+
                       userId: "64f69a...",
+
                       rating: 5,
+
                       comment: "Great",
                     },
                   ],
@@ -978,15 +1462,21 @@ const openApiDocument = {
     "/reviews/{id}": {
       get: {
         tags: ["Reviews"],
+
         summary: "Get review by id",
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: {
           "200": { description: "OK" },
           "404": { description: "Not found" },
@@ -994,16 +1484,23 @@ const openApiDocument = {
       },
       patch: {
         tags: ["Reviews"],
+
         summary: "Update review",
+
         security: [{ bearerAuth: [] }],
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         requestBody: {
           content: {
             "application/json": {
@@ -1015,16 +1512,23 @@ const openApiDocument = {
       },
       delete: {
         tags: ["Reviews"],
+
         summary: "Delete review",
+
         security: [{ bearerAuth: [] }],
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: { "204": { description: "Deleted" } },
       },
     },
@@ -1032,8 +1536,11 @@ const openApiDocument = {
     "/carts": {
       post: {
         tags: ["Carts"],
+
         summary: "Add item to cart",
+
         security: [{ bearerAuth: [] }],
+
         requestBody: {
           content: {
             "application/json": {
@@ -1044,17 +1551,31 @@ const openApiDocument = {
         responses: {
           "201": {
             description: "Added",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/CartItemResponse" },
                 example: {
                   message: "Cart item added/updated successfully",
+
                   cartItem: {
                     id: "64f6f2...",
+
+                    userId: "64f69a...",
+
                     productId: "64f6ef...",
+
                     quantity: 2,
-                    unitPrice: 25.5,
-                    totalPrice: 51.0,
+
+                    kilo: 2.5,
+
+                    pieces: 1,
+
+                    customText: "Happy Birthday",
+
+                    additionalDescription: "No nuts",
+
+                    createdAt: "2023-10-01T00:00:00.000Z",
                   },
                 },
               },
@@ -1064,11 +1585,15 @@ const openApiDocument = {
       },
       get: {
         tags: ["Carts"],
+
         summary: "Get user's cart",
+
         security: [{ bearerAuth: [] }],
+
         responses: {
           "200": {
             description: "OK",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/CartItemsListResponse" },
@@ -1083,16 +1608,23 @@ const openApiDocument = {
     "/carts/{id}": {
       patch: {
         tags: ["Carts"],
+
         summary: "Update cart item",
+
         security: [{ bearerAuth: [] }],
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         requestBody: {
           content: {
             "application/json": {
@@ -1103,6 +1635,7 @@ const openApiDocument = {
         responses: {
           "200": {
             description: "Updated",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/CartItemResponse" },
@@ -1113,19 +1646,27 @@ const openApiDocument = {
       },
       delete: {
         tags: ["Carts"],
+
         summary: "Delete cart item",
+
         security: [{ bearerAuth: [] }],
+
         parameters: [
           {
             name: "id",
+
             in: "path",
+
             required: true,
+
             schema: { type: "string" },
           },
         ],
+
         responses: {
           "200": {
             description: "Deleted",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/CartItemResponse" },
@@ -1138,15 +1679,238 @@ const openApiDocument = {
     "/carts/clear": {
       delete: {
         tags: ["Carts"],
+
         summary: "Clear user cart",
+
         security: [{ bearerAuth: [] }],
+
         responses: {
           "200": {
             description: "Cleared",
+
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/MessageResponse" },
                 example: { message: "User cart cleared successfully" },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/orders": {
+      post: {
+        tags: ["Orders"],
+
+        summary: "Create a new order",
+
+        security: [{ bearerAuth: [] }],
+
+        requestBody: {
+          required: true,
+
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+
+                properties: {
+                  orderItems: {
+                    type: "array",
+
+                    items: { type: "string" },
+                  },
+                  phoneNumber: { type: "string" },
+                  totalPrice: { type: "number" },
+                  upfrontPaid: { type: "number" },
+                  deliveryTime: { type: "string", format: "date-time" },
+                  paymentProofFile: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Created",
+
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/OrderResponse" },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        tags: ["Orders"],
+
+        summary: "Get all orders",
+
+        security: [{ bearerAuth: [] }],
+
+        responses: {
+          "200": {
+            description: "OK",
+
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/OrdersListResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/orders/user": {
+      get: {
+        tags: ["Orders"],
+
+        summary: "Get orders for user",
+
+        security: [{ bearerAuth: [] }],
+
+        responses: {
+          "200": {
+            description: "OK",
+
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/OrdersListResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/orders/{id}": {
+      get: {
+        tags: ["Orders"],
+
+        summary: "Get order by id",
+
+        security: [{ bearerAuth: [] }],
+
+        parameters: [
+          {
+            name: "id",
+
+            in: "path",
+
+            required: true,
+
+            schema: { type: "string" },
+          },
+        ],
+
+        responses: {
+          "200": {
+            description: "OK",
+
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/OrderResponse" },
+              },
+            },
+          },
+        },
+      },
+      put: {
+        tags: ["Orders"],
+
+        summary: "Update order",
+
+        security: [{ bearerAuth: [] }],
+
+        parameters: [
+          {
+            name: "id",
+
+            in: "path",
+
+            required: true,
+
+            schema: { type: "string" },
+          },
+        ],
+
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/Order" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Updated",
+
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/OrderResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/custom-orders": {
+      post: {
+        tags: ["Custom Orders"],
+
+        summary: "Create a custom order",
+
+        security: [{ bearerAuth: [] }],
+
+        requestBody: {
+          required: true,
+
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+
+                properties: {
+                  customCakeId: { type: "string" },
+                  totalPrice: { type: "number" },
+                  upfrontPaid: { type: "number" },
+                  deliveryTime: { type: "string", format: "date-time" },
+                  paymentProofFile: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Created",
+
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CustomOrderResponse" },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        tags: ["Custom Orders"],
+
+        summary: "Get all custom orders",
+
+        security: [{ bearerAuth: [] }],
+
+        responses: {
+          "200": {
+            description: "OK",
+
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/CustomOrdersListResponse",
+                },
               },
             },
           },

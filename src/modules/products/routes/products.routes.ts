@@ -32,15 +32,14 @@ const maybeLogContentType = (req: any, res: any, next: any) => {
 
 const validateMultipart = (req: any, res: any, next: any) => {
   const ct = (req.headers && req.headers["content-type"]) || "";
-  if (
-    typeof ct !== "string" ||
-    !ct.includes("multipart/form-data") ||
-    !ct.includes("boundary=")
-  ) {
-    return res.status(400).json({
-      message:
-        "Invalid Content-Type for file upload. Use multipart/form-data and do NOT set the Content-Type header manually. If using axios, let it set headers from FormData (or use formData.getHeaders()).",
-    });
+  // Only validate if it claims to be multipart
+  if (typeof ct === "string" && ct.includes("multipart/form-data")) {
+    if (!ct.includes("boundary=")) {
+      return res.status(400).json({
+        message:
+          "Invalid Content-Type for file upload. Use multipart/form-data and do NOT set the Content-Type header manually. If using axios, let it set headers from FormData (or use formData.getHeaders()).",
+      });
+    }
   }
   next();
 };
@@ -93,11 +92,20 @@ const safeUploadFields = (fields: any) => {
 router.post(
   "/",
   maybeLogContentType,
-  validateMultipart,
-  safeUploadFields([
-    { name: "image", maxCount: 1 },
-    { name: "images", maxCount: 5 },
-  ]),
+  (req: any, res: any, next: any) => {
+    const ct = (req.headers && req.headers["content-type"]) || "";
+    // Only use multipart validation and multer if content-type is multipart
+    if (typeof ct === "string" && ct.includes("multipart/form-data")) {
+      return validateMultipart(req, res, () => {
+        return safeUploadFields([
+          { name: "image", maxCount: 1 },
+          { name: "images", maxCount: 5 },
+        ])(req, res, next);
+      });
+    }
+    // For JSON requests, skip multipart handling
+    next();
+  },
   productController.createProduct
 );
 router.get("/", productController.getAllProducts);

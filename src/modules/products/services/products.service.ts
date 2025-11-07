@@ -6,10 +6,6 @@ import { IProduct } from "../../../database/models/product.model";
 import { HttpError } from "../../../core/errors/HttpError";
 import fs from "fs";
 import path from "path";
-import {
-  createProductSchema,
-  updateProductSchema,
-} from "../validators/products.validator";
 
 export class ProductService {
   private productRepository: ProductRepository;
@@ -123,17 +119,45 @@ export class ProductService {
   }
 
   /**
-   * Retrieves a single product by its ID.
+   * Retrieves a single product by its ID with populated category and subcategory details.
+   * Also fetches related products from the same subcategory/category.
    * @param id The ID of the product.
-   * @returns The product.
+   * @returns The product with related products.
    * @throws HttpError if product is not found.
    */
-  async getProductById(id: string): Promise<IProduct> {
+  async getProductById(
+    id: string
+  ): Promise<IProduct & { related_products?: IProduct[] }> {
     const product = await this.productRepository.findById(id);
     if (!product) {
       throw new HttpError(404, `Product with ID '${id}' not found.`);
     }
-    return product;
+
+    // Extract category and subcategory IDs (they might be populated objects)
+    const categoryId =
+      typeof product.category_id === "object" && product.category_id !== null
+        ? (product.category_id as any)._id.toString()
+        : product.category_id.toString();
+
+    const subcategoryId =
+      typeof product.subcategory_id === "object" &&
+      product.subcategory_id !== null
+        ? (product.subcategory_id as any)._id.toString()
+        : product.subcategory_id.toString();
+
+    // Fetch related products
+    const relatedProducts = await this.productRepository.findRelatedProducts(
+      id,
+      categoryId,
+      subcategoryId
+    );
+
+    // Attach related products to the product object
+    const productWithRelated = product.toObject ? product.toObject() : product;
+    return {
+      ...productWithRelated,
+      related_products: relatedProducts,
+    };
   }
 
   /**
@@ -152,46 +176,25 @@ export class ProductService {
       throw new HttpError(404, `Product with ID '${id}' not found for update.`);
     }
 
-    // Merge existing data with update data to perform full validation
-    const combinedData = {
-      ...existingProduct.toObject(), // Convert Mongoose document to plain object
-      ...updateData,
-      category_id: (
-        updateData.category_id || existingProduct.category_id
-      ).toString(),
-      subcategory_id: (
-        updateData.subcategory_id || existingProduct.subcategory_id
-      ).toString(),
-    };
+    // Extract IDs from potentially populated fields
+    const existingCategoryId =
+      typeof existingProduct.category_id === "object" &&
+      existingProduct.category_id !== null
+        ? (existingProduct.category_id as any)._id.toString()
+        : existingProduct.category_id.toString();
 
-    // Re-validate the combined data using the create schema to enforce all rules
-    try {
-      createProductSchema.parse(combinedData);
-    } catch (error: any) {
-      if (error?.name === "ZodError" || error instanceof Error) {
-        const errs = error.errors ?? error.issues ?? [];
-        const messages = Array.isArray(errs)
-          ? errs.map((e: any) => e.message || String(e)).join(", ")
-          : error.message || String(error);
-        throw new HttpError(400, `Validation error during update: ${messages}`);
-      }
-      throw error;
-    }
+    const existingSubcategoryId =
+      typeof existingProduct.subcategory_id === "object" &&
+      existingProduct.subcategory_id !== null
+        ? (existingProduct.subcategory_id as any)._id.toString()
+        : existingProduct.subcategory_id.toString();
 
-    // Validate parent entities if category_id or subcategory_id is updated or if it's implicitly part of the new state
-    const targetCategoryId = (
-      updateData.category_id || existingProduct.category_id
-    ).toString();
-    const targetSubcategoryId = (
-      updateData.subcategory_id || existingProduct.subcategory_id
-    ).toString();
+    // Validate parent entities if category_id or subcategory_id is being updated
+    const targetCategoryId = updateData.category_id || existingCategoryId;
+    const targetSubcategoryId =
+      updateData.subcategory_id || existingSubcategoryId;
 
-    if (
-      updateData.category_id ||
-      updateData.subcategory_id ||
-      existingProduct.category_id.toString() !== targetCategoryId ||
-      existingProduct.subcategory_id.toString() !== targetSubcategoryId
-    ) {
+    if (updateData.category_id || updateData.subcategory_id) {
       await this.validateParentEntities(targetCategoryId, targetSubcategoryId);
     }
 
@@ -200,8 +203,8 @@ export class ProductService {
 
     if (
       targetName !== existingProduct.name ||
-      targetCategoryId !== existingProduct.category_id.toString() ||
-      targetSubcategoryId !== existingProduct.subcategory_id.toString()
+      targetCategoryId !== existingCategoryId ||
+      targetSubcategoryId !== existingSubcategoryId
     ) {
       const conflictingProduct =
         await this.productRepository.findByNameAndCategoryAndSubcategory(
