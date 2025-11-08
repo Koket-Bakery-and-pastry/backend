@@ -34,6 +34,14 @@ export async function updateRefreshToken(
   return await User.findByIdAndUpdate(userId, { refresh_token }, { new: true });
 }
 
+export async function expireTokens(userId: string) {
+  return await User.findByIdAndUpdate(
+    userId,
+    { refresh_token: null },
+    { new: true }
+  );
+}
+
 export async function create(name: string, email: string, password: string) {
   const user = await User.create({
     name: name,

@@ -15,5 +15,6 @@ router.get("/test", authorize("admin"), (req, res) => {
 });
 router.post("/login", authController.login);
 router.post("/refresh", authController.refresh);
+router.post("/logout", authenticate, authController.logout);
 
 export default router;

@@ -76,6 +76,24 @@ export class AuthController {
       res.status(400).json({ message: e.message });
     }
   }
+
+  async logout(req: Request, res: Response) {
+    try {
+      const userId = req.body;
+
+      if (userId === undefined) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      await authService.logout(userId);
+      res.status(200).json({ message: "Logged out successfully" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  }
 }
 
 export const authController = new AuthController();

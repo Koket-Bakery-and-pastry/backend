@@ -48,6 +48,7 @@ class AuthService {
         code_challenge: codeChallenge,
         code_challenge_method: "S256",
         state,
+        prompt: "select_account",
       }),
       codeVerifier,
       state,
@@ -195,6 +196,10 @@ class AuthService {
     if (existing) return null;
     const hashed = await bcrypt.hash(password, 10);
     return await AuthRepository.create(name, email, hashed);
+  }
+
+  async logout(userId: string) {
+    return await AuthRepository.expireTokens(userId);
   }
 }
 
