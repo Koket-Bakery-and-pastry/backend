@@ -23,7 +23,29 @@ export class AuthController {
       if (!state) return res.status(400).json({ message: "Missing state" });
 
       const result = await authService.handleGoogleCallback(code, state);
-      return res.json(result);
+
+      // otherwise redirect to frontend with the returned code/token
+      const frontendBase = (
+        process.env.FRONTEND_URL ||
+        "https://frontend-37fhhe7az-nebas-projects-bc66f479.vercel.app"
+      ).replace(/\/$/, "");
+      const params = new URLSearchParams();
+
+      if (code) params.set("code", code);
+      if (result?.tokens.accessToken)
+        params.set("accessToken", result.tokens.accessToken);
+
+      if (result?.user) {
+        params.set("user", JSON.stringify(result.user));
+      }
+
+      if (result?.tokens.refreshToken) {
+        params.set("refreshToken", result.tokens.refreshToken);
+      }
+
+      return res.redirect(`${frontendBase}/auth/callback?${params.toString()}`);
+
+      // return res.json(result);
     } catch (error: any) {
       return res.status(500).json({ message: error.message || "OAuth failed" });
     }
