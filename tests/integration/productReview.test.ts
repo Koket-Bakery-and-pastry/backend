@@ -24,13 +24,15 @@ describe("Product Review API", () => {
     subcategory = await Subcategory.create({
       category_id: category._id,
       name: "Test Subcategory",
+      kilo_to_price_map: { "1kg": 500 },
+      is_pieceable: false,
+      upfront_payment: 100,
+      price: 500,
     });
     product = await Product.create({
       name: "Test Product",
       category_id: category._id,
       subcategory_id: subcategory._id,
-      is_pieceable: false,
-      kilo_to_price_map: { "1kg": 500 },
     });
     user = await User.create({
       name: "Test User",
@@ -48,12 +50,14 @@ describe("Product Review API", () => {
 
   // Test POST /api/v1/reviews - Create new review
   it("should create a new product review", async () => {
-    const res = await request(app).post("/api/v1/reviews").send({
-      product_id: product._id.toString(),
-      user_id: user._id.toString(),
-      rating: 5,
-      comment: "Absolutely delicious!",
-    });
+    const res = await request(app)
+      .post("/api/v1/reviews")
+      .send({
+        product_id: String(product._id),
+        user_id: String(user._id),
+        rating: 5,
+        comment: "Absolutely delicious!",
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.message).toBe(
@@ -62,19 +66,25 @@ describe("Product Review API", () => {
     expect(res.body.review).toHaveProperty("_id");
     expect(res.body.review.rating).toBe(5);
     expect(res.body.review.comment).toBe("Absolutely delicious!");
-    expect(res.body.review.product_id).toBe(product._id.toString());
-    expect(res.body.review.user_id).toBe(user._id.toString());
+    // product_id is now populated with full product details
+    expect(res.body.review.product_id).toHaveProperty("_id");
+    expect(res.body.review.product_id._id).toBe(String(product._id));
+    expect(res.body.review.product_id).toHaveProperty("category_id");
+    expect(res.body.review.product_id).toHaveProperty("subcategory_id");
+    expect(res.body.review.user_id).toBe(String(user._id));
 
     const createdReview = await ProductReview.findById(res.body.review._id);
     expect(createdReview).not.toBeNull();
   });
 
   it("should return 400 if required fields are missing during review creation", async () => {
-    const res = await request(app).post("/api/v1/reviews").send({
-      product_id: product._id.toString(),
-      user_id: user._id.toString(),
-      // rating is missing
-    });
+    const res = await request(app)
+      .post("/api/v1/reviews")
+      .send({
+        product_id: String(product._id),
+        user_id: String(user._id),
+        // rating is missing
+      });
 
     expect(res.status).toBe(400);
     expect(res.body.message).toContain("Rating must be at least 1.");
@@ -82,11 +92,13 @@ describe("Product Review API", () => {
 
   it("should return 404 if product does not exist for review", async () => {
     const nonExistentProductId = "60a7e1f4b0d8a5001f8e1a1a";
-    const res = await request(app).post("/api/v1/reviews").send({
-      product_id: nonExistentProductId,
-      user_id: user._id.toString(),
-      rating: 4,
-    });
+    const res = await request(app)
+      .post("/api/v1/reviews")
+      .send({
+        product_id: nonExistentProductId,
+        user_id: String(user._id),
+        rating: 4,
+      });
 
     expect(res.status).toBe(404);
     expect(res.body.message).toBe(
@@ -96,11 +108,13 @@ describe("Product Review API", () => {
 
   it("should return 404 if user does not exist for review", async () => {
     const nonExistentUserId = "60a7e1f4b0d8a5001f8e1a1b";
-    const res = await request(app).post("/api/v1/reviews").send({
-      product_id: product._id.toString(),
-      user_id: nonExistentUserId,
-      rating: 3,
-    });
+    const res = await request(app)
+      .post("/api/v1/reviews")
+      .send({
+        product_id: String(product._id),
+        user_id: nonExistentUserId,
+        rating: 3,
+      });
 
     expect(res.status).toBe(404);
     expect(res.body.message).toBe(
@@ -111,20 +125,24 @@ describe("Product Review API", () => {
   // Test POST /api/v1/reviews - Update existing review
   it("should update an existing product review if user reviews same product again", async () => {
     // First review
-    await request(app).post("/api/v1/reviews").send({
-      product_id: product._id.toString(),
-      user_id: user._id.toString(),
-      rating: 3,
-      comment: "It was okay.",
-    });
+    await request(app)
+      .post("/api/v1/reviews")
+      .send({
+        product_id: String(product._id),
+        user_id: String(user._id),
+        rating: 3,
+        comment: "It was okay.",
+      });
 
     // Second review (should update the first one)
-    const res = await request(app).post("/api/v1/reviews").send({
-      product_id: product._id.toString(),
-      user_id: user._id.toString(),
-      rating: 4,
-      comment: "Better than I thought!",
-    });
+    const res = await request(app)
+      .post("/api/v1/reviews")
+      .send({
+        product_id: String(product._id),
+        user_id: String(user._id),
+        rating: 4,
+        comment: "Better than I thought!",
+      });
 
     expect(res.status).toBe(201); // Still 201 as it's a "createOrUpdate" endpoint
     expect(res.body.message).toBe(
@@ -183,13 +201,15 @@ describe("Product Review API", () => {
     });
 
     const res = await request(app).get(
-      `/api/v1/reviews?productId=${product._id.toString()}`
+      `/api/v1/reviews?productId=${String(product._id)}`
     );
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Product reviews fetched successfully");
     expect(res.body.reviews).toHaveLength(1);
-    expect(res.body.reviews[0].product_id).toBe(product._id.toString());
+    // product_id is now populated
+    expect(res.body.reviews[0].product_id).toHaveProperty("_id");
+    expect(res.body.reviews[0].product_id._id).toBe(String(product._id));
   });
 
   it("should retrieve product reviews filtered by userId", async () => {
@@ -197,8 +217,6 @@ describe("Product Review API", () => {
       name: "Another Product 2",
       category_id: category._id,
       subcategory_id: subcategory._id,
-      is_pieceable: true,
-      pieces: 10,
     });
     await ProductReview.create({
       product_id: product._id,
@@ -212,12 +230,12 @@ describe("Product Review API", () => {
     });
 
     const res = await request(app).get(
-      `/api/v1/reviews?userId=${user._id.toString()}`
+      `/api/v1/reviews?userId=${String(user._id)}`
     );
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Product reviews fetched successfully");
     expect(res.body.reviews).toHaveLength(1);
-    expect(res.body.reviews[0].user_id).toBe(user._id.toString());
+    expect(res.body.reviews[0].user_id).toBe(String(user._id));
   });
 });

@@ -23,25 +23,39 @@ describe("Carts API", () => {
     });
 
     category = await Category.create({ name: "Cakes" });
+
+    // Create subcategory with pricing for kilo-based products
     subcategory = await Subcategory.create({
       category_id: category._id,
       name: "Chocolate",
+      kilo_to_price_map: { "1kg": 500, "2kg": 900 },
+      is_pieceable: false,
+      upfront_payment: 100,
+      price: 500,
     });
 
+    // Create kilo-based product
     kiloProduct = await Product.create({
       name: "Kilo Cake",
       category_id: category._id,
       subcategory_id: subcategory._id,
-      is_pieceable: false,
-      kilo_to_price_map: { "1kg": 500, "2kg": 900 },
     });
 
+    // Create subcategory for pieceable products
+    const pieceableSubcat = await Subcategory.create({
+      category_id: category._id,
+      name: "Cupcakes",
+      is_pieceable: true,
+      upfront_payment: 50,
+      price: 30,
+      kilo_to_price_map: {},
+    });
+
+    // Create pieceable product
     pieceableProduct = await Product.create({
       name: "Pieceable Cake",
       category_id: category._id,
-      subcategory_id: subcategory._id,
-      is_pieceable: true,
-      pieces: 12,
+      subcategory_id: pieceableSubcat._id,
     });
   });
 
@@ -177,7 +191,7 @@ describe("Carts API", () => {
       });
 
       const res = await request(app)
-        .patch(`/api/v1/carts/${cartItem._id.toString()}`)
+        .patch(`/api/v1/carts/${String(cartItem._id)}`)
         .set("x-test-user-id", user._id.toString())
         .send({ pieces: 4 });
 
@@ -200,7 +214,7 @@ describe("Carts API", () => {
       });
 
       const res = await request(app)
-        .patch(`/api/v1/carts/${cartItem._id.toString()}`)
+        .patch(`/api/v1/carts/${String(cartItem._id)}`)
         .set("x-test-user-id", user._id.toString())
         .send({ pieces: 4 });
 
@@ -219,11 +233,11 @@ describe("Carts API", () => {
       });
 
       const res = await request(app)
-        .delete(`/api/v1/carts/${cartItem._id.toString()}`)
+        .delete(`/api/v1/carts/${String(cartItem._id)}`)
         .set("x-test-user-id", user._id.toString());
 
       expect(res.status).toBe(200);
-      expect(res.body.cartItem._id).toBe(cartItem._id.toString());
+      expect(res.body.cartItem._id).toBe(String(cartItem._id));
 
       const found = await Cart.findById(cartItem._id);
       expect(found).toBeNull();
@@ -244,7 +258,7 @@ describe("Carts API", () => {
       });
 
       const res = await request(app)
-        .delete(`/api/v1/carts/${cartItem._id.toString()}`)
+        .delete(`/api/v1/carts/${String(cartItem._id)}`)
         .set("x-test-user-id", user._id.toString());
 
       expect(res.status).toBe(403);
