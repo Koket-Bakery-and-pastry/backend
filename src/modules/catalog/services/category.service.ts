@@ -1,7 +1,10 @@
+import { SubcategoryService } from "./subcategory.service";
+import { SubcategoryRepository } from "./../repositories/subcategory.repository";
 import { HttpError } from "../../../core/errors/HttpError";
 import { ICategory } from "../../../database/models/category.model";
 import { CreateCategoryDto, UpdateCategoryDto } from "../dtos/category.dto";
 import { CategoryRepository } from "../repositories/category.repository";
+import { ca } from "zod/v4/locales";
 
 export class CategoryService {
   private categoryRepository: CategoryRepository;
@@ -32,7 +35,38 @@ export class CategoryService {
    * @return An array of categories.
    */
   async getAllCategories(): Promise<ICategory[]> {
-    return this.categoryRepository.findAll();
+    let categories = await this.categoryRepository.findAll();
+    const subcategoryService = new SubcategoryService();
+
+    let subcategories: any[] = [];
+    for (const category of categories) {
+      const id = String((category as any)._id ?? (category as any).id);
+
+      try {
+        const subcategory =
+          await subcategoryService.getSubcategoriesByCategoryId(id);
+        subcategories.push(...subcategory);
+      } catch (error) {
+        // If there's an error fetching subcategories, we can log it or handle it as needed.
+        // For now, we'll just continue without adding subcategories.
+      }
+    }
+
+    // Attach subcategories to their respective categories
+    categories = categories.map((category) => {
+      const categoryId = String((category as any)._id ?? (category as any).id);
+      const relatedSubcategories = subcategories.filter(
+        (sub) =>
+          String((sub as any).category_id ?? (sub as any).categoryId) ===
+          categoryId
+      );
+      return {
+        ...category.toObject(),
+        subcategories: relatedSubcategories,
+      };
+    });
+
+    return categories;
   }
 
   /**

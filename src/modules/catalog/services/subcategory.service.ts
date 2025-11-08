@@ -162,4 +162,17 @@ export class SubcategoryService {
     // TODO: Add logic to handle associated products if a subcategory is deleted
     return deletedSubcategory;
   }
+
+  async getSubcategoriesByCategoryId(
+    categoryId: string
+  ): Promise<ISubcategory[]> {
+    const parentCategory = await this.categoryRepository.findById(categoryId);
+    if (!parentCategory) {
+      throw new HttpError(
+        404,
+        `Parent Category with ID '${categoryId}' not found`
+      );
+    }
+    return this.subcategoryRepository.findAll(categoryId);
+  }
 }

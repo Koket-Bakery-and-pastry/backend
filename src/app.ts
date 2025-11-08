@@ -1,5 +1,7 @@
+// app.ts
 import express from "express";
 import cors from "cors";
+import session from "express-session"; // Add this
 import swaggerUi from "swagger-ui-express";
 import { errorHandler } from "./core/middlewares/error-handler.middleware";
 import { HttpError } from "./core/errors/HttpError";
@@ -18,6 +20,20 @@ function testAuthMiddleware(req: any, res: any, next: any) {
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Add session middleware
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "your-secret-key",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 15, // 15 minutes
+    },
+  })
+);
+
 app.use("/uploads", express.static("uploads"));
 app.use(express.static(path.join(__dirname, "public")));
 
