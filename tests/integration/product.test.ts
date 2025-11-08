@@ -3,6 +3,8 @@ import app from "../../src/app";
 import Category from "../../src/database/models/category.model";
 import Subcategory from "../../src/database/models/subcategory.model";
 import Product from "../../src/database/models/product.model";
+import User from "../../src/database/models/user.model";
+import ProductReview from "../../src/database/models/productReview.model";
 import { ICategory } from "../../src/database/models/category.model";
 import { ISubcategory } from "../../src/database/models/subcategory.model";
 import { IProduct } from "../../src/database/models/product.model";
@@ -271,6 +273,66 @@ describe("Product API", () => {
       // Should have pricing from subcategory via enrichment
       expect(res.body.product.is_pieceable).toBe(false);
       expect(res.body.product.kilo_to_price_map["1kg"]).toBe(550);
+    });
+
+    it("should retrieve a product by ID with reviews", async () => {
+      const newProduct = (await Product.create({
+        name: "Chocolate Delight",
+        category_id: parentCategory._id,
+        subcategory_id: parentSubcategory._id,
+      })) as IProduct & { _id: Types.ObjectId };
+
+      // Create users for reviews
+      const user1 = await User.create({
+        name: "Reviewer One",
+        email: `reviewer1+${Date.now()}@example.com`,
+        password_hash: "hash",
+        role: "customer",
+      });
+
+      const user2 = await User.create({
+        name: "Reviewer Two",
+        email: `reviewer2+${Date.now()}@example.com`,
+        password_hash: "hash",
+        role: "customer",
+      });
+
+      // Create reviews for this product
+      await ProductReview.create({
+        product_id: newProduct._id,
+        user_id: user1._id,
+        rating: 5,
+        comment: "Amazing cake!",
+      });
+
+      await ProductReview.create({
+        product_id: newProduct._id,
+        user_id: user2._id,
+        rating: 4,
+        comment: "Very good, would recommend.",
+      });
+
+      const res = await request(app).get(
+        `/api/v1/products/${newProduct._id.toString()}`
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Product retrieved successfully");
+      expect(res.body.product.name).toBe("Chocolate Delight");
+
+      // Should include reviews array
+      expect(res.body.product).toHaveProperty("reviews");
+      expect(Array.isArray(res.body.product.reviews)).toBe(true);
+      expect(res.body.product.reviews).toHaveLength(2);
+
+      // Verify review content
+      expect(res.body.product.reviews[0]).toHaveProperty("rating");
+      expect(res.body.product.reviews[0]).toHaveProperty("comment");
+      expect(res.body.product.reviews[0]).toHaveProperty("user_id");
+
+      // Check that ratings match (order may vary)
+      const ratings = res.body.product.reviews.map((r: any) => r.rating).sort();
+      expect(ratings).toEqual([4, 5]);
     });
 
     it("should return 404 if product ID is not found", async () => {

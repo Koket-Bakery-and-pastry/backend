@@ -123,6 +123,12 @@ const openApiDocument = {
               "Related products from same subcategory/category (only included when fetching by ID)",
             items: { $ref: "#/components/schemas/Product" },
           },
+          reviews: {
+            type: "array",
+            description:
+              "Product reviews and ratings (only included when fetching by ID)",
+            items: { $ref: "#/components/schemas/ProductReview" },
+          },
           created_at: { type: "string", format: "date-time" },
           updated_at: { type: "string", format: "date-time" },
         },
@@ -1089,6 +1095,45 @@ const openApiDocument = {
                         pricing: "per_kilo",
                         stock: 5,
                         created_at: "2023-09-05T10:12:00.000Z",
+                      },
+                    ],
+                    reviews: [
+                      {
+                        _id: "64f701...",
+                        product_id: {
+                          _id: "64f6ef...",
+                          name: "Chocolate Cake",
+                          description: "Rich chocolate cake",
+                          image_url: "/uploads/products/chocolate.jpg",
+                          category_id: {
+                            _id: "64f6ea...",
+                            name: "Cakes",
+                            description: "Various cakes",
+                            created_at: "2023-09-05T10:00:00.000Z",
+                          },
+                          subcategory_id: {
+                            _id: "64f6ec...",
+                            name: "Chocolate Cakes",
+                            category_id: "64f6ea...",
+                            kilo_to_price_map: {
+                              "1": 500,
+                              "2": 950,
+                            },
+                            pricing: "per_kilo",
+                            created_at: "2023-09-05T10:05:00.000Z",
+                          },
+                          kilo_to_price_map: {
+                            "1": 500,
+                            "2": 950,
+                          },
+                          pricing: "per_kilo",
+                          stock: 10,
+                          created_at: "2023-09-05T10:10:00.000Z",
+                        },
+                        user_id: "64f69a...",
+                        rating: 5,
+                        comment: "Amazing cake!",
+                        created_at: "2023-09-06T12:00:00.000Z",
                       },
                     ],
                   },
