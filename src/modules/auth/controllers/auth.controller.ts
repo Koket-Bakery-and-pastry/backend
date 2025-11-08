@@ -38,8 +38,8 @@ export class AuthController {
         params.set("user", JSON.stringify(result.user));
       }
 
-      if (result?.tokens.refreshToken) {
-        params.set("refreshToken", result.tokens.refreshToken);
+      if (result?.tokens) {
+        params.set("token", JSON.stringify(result.tokens));
       }
 
       return res.redirect(`${frontendBase}/auth/callback?${params.toString()}`);
