@@ -26,8 +26,7 @@ export class AuthController {
 
       // otherwise redirect to frontend with the returned code/token
       const frontendBase = (
-        process.env.FRONTEND_URL ||
-        "https://frontend-37fhhe7az-nebas-projects-bc66f479.vercel.app"
+        process.env.FRONTEND_URL || "https://frontend-omega-dun-59.vercel.app/"
       ).replace(/\/$/, "");
       const params = new URLSearchParams();
 
