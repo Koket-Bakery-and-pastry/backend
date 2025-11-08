@@ -16,6 +16,25 @@ export class CartController {
     this.cartService = new CartService();
   }
 
+  // Enrich cart item's product with pricing info from subcategory
+  private enrichCartItemWithPricing(cartItem: any): any {
+    const item = cartItem.toObject ? cartItem.toObject() : cartItem;
+
+    if (item.product_id && typeof item.product_id === "object") {
+      const product = item.product_id;
+      const subcat = product.subcategory_id;
+
+      if (subcat && typeof subcat === "object") {
+        // Add pricing fields to product for backward compatibility
+        product.kilo_to_price_map = subcat.kilo_to_price_map || {};
+        product.upfront_payment = subcat.upfront_payment;
+        product.is_pieceable = subcat.is_pieceable ?? false;
+      }
+    }
+
+    return item;
+  }
+
   addItemToCart = async (
     req: AuthRequest,
     res: Response,
@@ -37,9 +56,10 @@ export class CartController {
       const cartItem = await this.cartService.addItemToCart(
         cartItemData as any
       );
+      const enriched = this.enrichCartItemWithPricing(cartItem);
       res.status(201).json({
         message: "Cart item added/updated successfully",
-        cartItem: cartItem,
+        cartItem: enriched,
       });
     } catch (error: any) {
       if (error instanceof ZodError) {
@@ -58,9 +78,12 @@ export class CartController {
       }
 
       const cartItems = await this.cartService.getUserCart(userId);
+      const enriched = cartItems.map((item) =>
+        this.enrichCartItemWithPricing(item)
+      );
       res.status(200).json({
         message: "User cart retrieved successfully",
-        cartItems: cartItems,
+        cartItems: enriched,
       });
     } catch (error) {
       next(error);
@@ -85,9 +108,10 @@ export class CartController {
         userId,
         updateData
       );
+      const enriched = this.enrichCartItemWithPricing(updatedCartItem);
       res.status(200).json({
         message: "Cart Item updated successfully",
-        cartItem: updatedCartItem,
+        cartItem: enriched,
       });
     } catch (error: any) {
       if (error instanceof ZodError) {
@@ -117,9 +141,10 @@ export class CartController {
         cartItemId,
         userId
       );
+      const enriched = this.enrichCartItemWithPricing(deletedCartItem);
       res.status(200).json({
         message: "Cart item deleted successfully",
-        cartItem: deletedCartItem,
+        cartItem: enriched,
       });
     } catch (error: any) {
       if (error instanceof ZodError) {

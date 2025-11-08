@@ -85,6 +85,9 @@ build/Release
 # Typescript declaration files
 *.d.ts
 
+# Compiled test files (TypeScript tests should not be compiled)
+tests/**/*.js
+
 # Prisma
 prisma/generated/
 

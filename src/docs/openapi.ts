@@ -61,7 +61,8 @@ const openApiDocument = {
       // Product entity
       Product: {
         type: "object",
-        description: "Product available in the catalog",
+        description:
+          "Product available in the catalog. Note: In all GET/POST/PUT/DELETE responses, category_id and subcategory_id are fully populated objects (not just IDs). Pricing fields (kilo_to_price_map, is_pieceable, upfront_payment) are inherited from the subcategory.",
         required: ["name", "category_id", "subcategory_id"],
         properties: {
           _id: {
@@ -85,34 +86,14 @@ const openApiDocument = {
             example: "/uploads/products/chocolate.jpg",
           },
           category_id: {
-            oneOf: [
-              {
-                type: "string",
-                description: "Category ID reference",
-                example: "64f6e0...",
-              },
-              {
-                $ref: "#/components/schemas/Category",
-                description: "Populated category details",
-              },
-            ],
+            $ref: "#/components/schemas/Category",
             description:
-              "Category reference (ID or populated object when fetching by ID)",
+              "Populated category details (always included in responses)",
           },
           subcategory_id: {
-            oneOf: [
-              {
-                type: "string",
-                description: "Subcategory ID reference",
-                example: "64f6e1...",
-              },
-              {
-                $ref: "#/components/schemas/Subcategory",
-                description: "Populated subcategory details",
-              },
-            ],
+            $ref: "#/components/schemas/Subcategory",
             description:
-              "Subcategory reference (ID or populated object when fetching by ID)",
+              "Populated subcategory details (always included in responses)",
           },
           kilo_to_price_map: {
             type: "object",
@@ -229,7 +210,8 @@ const openApiDocument = {
 
       CartItem: {
         type: "object",
-        description: "An item inside a user's cart",
+        description:
+          "An item inside a user's cart. Note: In all responses, product_id is a fully populated Product object (which itself has populated category_id and subcategory_id).",
         required: ["product_id", "quantity"],
         properties: {
           _id: {
@@ -243,9 +225,9 @@ const openApiDocument = {
             example: "64f69a...",
           },
           product_id: {
-            type: "string",
-            description: "Referenced product id",
-            example: "64f6ef...",
+            $ref: "#/components/schemas/Product",
+            description:
+              "Populated product details with nested category and subcategory (always included in responses)",
           },
           kilo: {
             type: "number",
@@ -277,9 +259,114 @@ const openApiDocument = {
         },
       },
 
+      // Input schemas for creating/updating (send IDs, not objects)
+      CreateProductInput: {
+        type: "object",
+        description:
+          "Schema for creating a product (send category/subcategory IDs)",
+        required: ["name", "category_id", "subcategory_id"],
+        properties: {
+          name: {
+            type: "string",
+            description: "Product name",
+            example: "Chocolate Fudge Cake",
+          },
+          description: {
+            type: "string",
+            description: "Product description",
+            example: "Rich chocolate cake with fudge frosting",
+          },
+          image_url: {
+            type: "string",
+            description: "Image URL or path",
+            example: "/uploads/products/chocolate.jpg",
+          },
+          category_id: {
+            type: "string",
+            description: "Category ID (send as string, not object)",
+            example: "64f6e0...",
+          },
+          subcategory_id: {
+            type: "string",
+            description: "Subcategory ID (send as string, not object)",
+            example: "64f6e1...",
+          },
+        },
+      },
+
+      UpdateProductInput: {
+        type: "object",
+        description: "Schema for updating a product (all fields optional)",
+        properties: {
+          name: { type: "string", example: "Updated Cake Name" },
+          description: { type: "string" },
+          image_url: { type: "string" },
+          category_id: {
+            type: "string",
+            description: "Category ID (send as string, not object)",
+          },
+          subcategory_id: {
+            type: "string",
+            description: "Subcategory ID (send as string, not object)",
+          },
+        },
+      },
+
+      CreateCartItemInput: {
+        type: "object",
+        description: "Schema for adding item to cart (send product ID)",
+        required: ["product_id"],
+        properties: {
+          product_id: {
+            type: "string",
+            description: "Product ID (send as string, not object)",
+            example: "64f6ef...",
+          },
+          kilo: {
+            type: "number",
+            description: "Kilo quantity (for kilo-based products)",
+            example: 1,
+          },
+          pieces: {
+            type: "integer",
+            description: "Number of pieces (for pieceable products)",
+            example: 6,
+          },
+          quantity: {
+            type: "integer",
+            description: "Quantity",
+            example: 1,
+            minimum: 1,
+          },
+          custom_text: {
+            type: "string",
+            description: "Custom text for cake",
+            example: "Happy Birthday",
+          },
+          additional_description: {
+            type: "string",
+            description: "Additional notes",
+            example: "No nuts please",
+          },
+        },
+      },
+
+      UpdateCartItemInput: {
+        type: "object",
+        description: "Schema for updating cart item (all fields optional)",
+        properties: {
+          kilo: { type: "number" },
+          pieces: { type: "integer" },
+          quantity: { type: "integer", minimum: 1 },
+          custom_text: { type: "string" },
+          additional_description: { type: "string" },
+        },
+      },
+
       ProductReview: {
         type: "object",
-        description: "A review left by a user for a product",
+        description:
+          "A review left by a user for a product. Note: In all responses, product_id is a fully populated Product object (with nested category_id and subcategory_id).",
         required: ["product_id", "rating"],
         properties: {
           _id: {
@@ -288,9 +375,9 @@ const openApiDocument = {
             example: "64f701...",
           },
           product_id: {
-            type: "string",
-            description: "Reviewed product id",
-            example: "64f6ef...",
+            $ref: "#/components/schemas/Product",
+            description:
+              "Populated product details with nested category and subcategory (always included in responses)",
           },
           user_id: {
             type: "string",
@@ -310,6 +397,53 @@ const openApiDocument = {
             example: "The cake was moist and the frosting was perfect.",
           },
           created_at: { type: "string", format: "date-time" },
+        },
+      },
+
+      CreateProductReviewInput: {
+        type: "object",
+        description:
+          "Schema for creating a product review (send product_id as string)",
+        required: ["product_id", "rating"],
+        properties: {
+          product_id: {
+            type: "string",
+            description: "Product ID (send as string, not object)",
+            example: "64f6ef...",
+          },
+          user_id: {
+            type: "string",
+            description: "User ID",
+            example: "64f69a...",
+          },
+          rating: {
+            type: "integer",
+            minimum: 1,
+            maximum: 5,
+            description: "Rating from 1 to 5",
+            example: 5,
+          },
+          comment: {
+            type: "string",
+            description: "Review comment (optional)",
+            example: "The cake was moist and the frosting was perfect.",
+          },
+        },
+      },
+
+      UpdateProductReviewInput: {
+        type: "object",
+        description:
+          "Schema for updating a product review (all fields optional)",
+        properties: {
+          rating: {
+            type: "integer",
+            minimum: 1,
+            maximum: 5,
+          },
+          comment: {
+            type: "string",
+          },
         },
       },
 
@@ -405,7 +539,7 @@ const openApiDocument = {
         type: "object",
         properties: {
           message: { type: "string" },
-          cartItem: { type: "object" },
+          cartItem: { $ref: "#/components/schemas/CartItem" },
         },
       },
       CartItemsListResponse: {
@@ -781,34 +915,27 @@ const openApiDocument = {
 
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/Product" },
+              schema: { $ref: "#/components/schemas/CreateProductInput" },
               example: {
                 name: "Chocolate Fudge Cake",
-
                 description: "Rich chocolate cake with fudge",
-
-                categoryId: "64f6e0...",
-
-                subcategoryId: "64f6e1...",
+                category_id: "64f6e0...",
+                subcategory_id: "64f6e1...",
               },
             },
             "multipart/form-data": {
               schema: {
                 type: "object",
-
                 properties: {
                   name: { type: "string" },
                   description: { type: "string" },
-                  price: { type: "number" },
-                  categoryId: { type: "string" },
-                  subcategoryId: { type: "string" },
+                  category_id: { type: "string" },
+                  subcategory_id: { type: "string" },
                   image: { type: "string", format: "binary" },
                   images: {
                     type: "array",
-
                     items: { type: "string", format: "binary" },
                   },
-                  stock: { type: "integer" },
                 },
               },
             },
@@ -993,25 +1120,21 @@ const openApiDocument = {
         requestBody: {
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/Product" },
+              schema: { $ref: "#/components/schemas/UpdateProductInput" },
             },
             "multipart/form-data": {
               schema: {
                 type: "object",
-
                 properties: {
                   name: { type: "string" },
                   description: { type: "string" },
-                  price: { type: "number" },
-                  categoryId: { type: "string" },
-                  subcategoryId: { type: "string" },
+                  category_id: { type: "string" },
+                  subcategory_id: { type: "string" },
                   image: { type: "string", format: "binary" },
                   images: {
                     type: "array",
-
                     items: { type: "string", format: "binary" },
                   },
-                  stock: { type: "integer" },
                 },
               },
             },
@@ -1401,7 +1524,7 @@ const openApiDocument = {
         requestBody: {
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/ProductReview" },
+              schema: { $ref: "#/components/schemas/CreateProductReviewInput" },
             },
           },
         },
@@ -1504,7 +1627,7 @@ const openApiDocument = {
         requestBody: {
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/ProductReview" },
+              schema: { $ref: "#/components/schemas/UpdateProductReviewInput" },
             },
           },
         },
@@ -1544,7 +1667,7 @@ const openApiDocument = {
         requestBody: {
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/CartItem" },
+              schema: { $ref: "#/components/schemas/CreateCartItemInput" },
             },
           },
         },
@@ -1557,25 +1680,36 @@ const openApiDocument = {
                 schema: { $ref: "#/components/schemas/CartItemResponse" },
                 example: {
                   message: "Cart item added/updated successfully",
-
                   cartItem: {
-                    id: "64f6f2...",
-
-                    userId: "64f69a...",
-
-                    productId: "64f6ef...",
-
-                    quantity: 2,
-
-                    kilo: 2.5,
-
-                    pieces: 1,
-
-                    customText: "Happy Birthday",
-
-                    additionalDescription: "No nuts",
-
-                    createdAt: "2023-10-01T00:00:00.000Z",
+                    _id: "64f6f2...",
+                    user_id: "64f69a...",
+                    product_id: {
+                      _id: "64f6ef...",
+                      name: "Chocolate Cake",
+                      description: "Rich chocolate cake",
+                      image_url: "/uploads/products/chocolate.jpg",
+                      category_id: {
+                        _id: "64f6ea...",
+                        name: "Cakes",
+                        description: "Various cakes",
+                      },
+                      subcategory_id: {
+                        _id: "64f6ec...",
+                        name: "Chocolate Cakes",
+                        kilo_to_price_map: { "1kg": 500, "2kg": 900 },
+                        is_pieceable: false,
+                        upfront_payment: 100,
+                        price: 500,
+                      },
+                      kilo_to_price_map: { "1kg": 500, "2kg": 900 },
+                      is_pieceable: false,
+                      upfront_payment: 100,
+                    },
+                    quantity: 1,
+                    kilo: 1,
+                    custom_text: "Happy Birthday",
+                    additional_description: "No nuts",
+                    created_at: "2023-10-01T00:00:00.000Z",
                   },
                 },
               },
@@ -1628,7 +1762,7 @@ const openApiDocument = {
         requestBody: {
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/CartItem" },
+              schema: { $ref: "#/components/schemas/UpdateCartItemInput" },
             },
           },
         },

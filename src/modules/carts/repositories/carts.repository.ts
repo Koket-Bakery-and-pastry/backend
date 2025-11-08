@@ -7,6 +7,10 @@ export class CartRepository {
   async create(data: AddToCartDto): Promise<ICart> {
     const cartItem = new Cart(data);
     await cartItem.save();
+    await cartItem.populate({
+      path: "product_id",
+      populate: [{ path: "category_id" }, { path: "subcategory_id" }],
+    });
     return cartItem;
   }
 
@@ -21,20 +25,34 @@ export class CartRepository {
   }
 
   async findByUserId(userId: string): Promise<ICart[]> {
-    return Cart.find({ user_id: new Types.ObjectId(userId) }).populate(
-      "product_id"
-    );
+    return Cart.find({ user_id: new Types.ObjectId(userId) }).populate({
+      path: "product_id",
+      populate: [{ path: "category_id" }, { path: "subcategory_id" }],
+    });
   }
   async findById(id: string): Promise<ICart | null> {
-    return Cart.findById(id).populate("product_id"); // Populate product details
+    return Cart.findById(id).populate({
+      path: "product_id",
+      populate: [{ path: "category_id" }, { path: "subcategory_id" }],
+    });
   }
 
   async update(id: string, data: UpdateCartItemDto): Promise<ICart | null> {
-    return Cart.findByIdAndUpdate(id, data, { new: true });
+    return Cart.findByIdAndUpdate(id, data, { new: true }).populate({
+      path: "product_id",
+      populate: [{ path: "category_id" }, { path: "subcategory_id" }],
+    });
   }
 
   async delete(id: string): Promise<ICart | null> {
-    return Cart.findByIdAndDelete(id);
+    const cartItem = await Cart.findByIdAndDelete(id);
+    if (cartItem) {
+      await cartItem.populate({
+        path: "product_id",
+        populate: [{ path: "category_id" }, { path: "subcategory_id" }],
+      });
+    }
+    return cartItem;
   }
 
   async clearCart(userId: string) {
