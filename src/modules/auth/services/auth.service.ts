@@ -39,7 +39,6 @@ class AuthService {
     const codeVerifier = generators.codeVerifier();
     const codeChallenge = generators.codeChallenge(codeVerifier);
 
-    // persist verifier keyed by state so callback can validate the PKCE verifier
     this.codeVerifierStore.set(state, codeVerifier);
 
     return {
@@ -49,6 +48,7 @@ class AuthService {
         code_challenge_method: "S256",
         state,
         prompt: "select_account",
+        // optionally: prompt: "consent select_account"
       }),
       codeVerifier,
       state,
