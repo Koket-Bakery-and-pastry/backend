@@ -2,23 +2,27 @@ import { Request, Response } from "express";
 import { authService } from "../services/auth.service";
 
 export class AuthController {
-  private storedCodeVerifier = "";
-
   async googleAuthRedirect(req: Request, res: Response) {
-    const { url, codeVerifier } = await authService.getGoogleAuthUrl();
-    this.storedCodeVerifier = codeVerifier;
-    return res.redirect(url);
+    try {
+      const { url /*, state, codeVerifier */ } =
+        await authService.getGoogleAuthUrl();
+      return res.redirect(url);
+    } catch (error: any) {
+      return res
+        .status(500)
+        .json({ message: error.message || "Failed to initiate Google auth" });
+    }
   }
 
   async googleAuthCallback(req: Request, res: Response) {
     try {
       const code = req.query.code as string;
-      if (!code) return res.status(400).json({ message: "Missing code" });
+      const state = req.query.state as string;
 
-      const result = await authService.handleGoogleCallback(
-        code,
-        this.storedCodeVerifier
-      );
+      if (!code) return res.status(400).json({ message: "Missing code" });
+      if (!state) return res.status(400).json({ message: "Missing state" });
+
+      const result = await authService.handleGoogleCallback(code, state);
       return res.json(result);
     } catch (error: any) {
       return res.status(500).json({ message: error.message || "OAuth failed" });

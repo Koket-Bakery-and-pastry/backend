@@ -6,7 +6,7 @@ import { objectIdSchema } from "../../../core/validators/objectId.validation";
 // These fields should NOT be set on the product itself
 export const createProductSchema = z.object({
   name: z.string().trim().min(1, "Product name cannot be empty."),
-  image_url: z.string().url("Image URL must be a valid URL.").optional(),
+  image_url: z.string().optional(),
   category_id: objectIdSchema.min(1, "Category ID is required."),
   subcategory_id: objectIdSchema.min(1, "Subcategory ID is required."),
   description: z.string().trim().optional(),

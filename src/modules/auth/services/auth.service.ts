@@ -1,10 +1,4 @@
-// openid-client is an ES module; load it dynamically at runtime and cache the module
-let OpenIDClient: any | null = null;
-async function loadOpenIDClient() {
-  if (OpenIDClient) return OpenIDClient;
-  OpenIDClient = await import("openid-client");
-  return OpenIDClient;
-}
+import { Issuer, generators, Client } from "openid-client";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as AuthRepository from "../repositories/auth.repository";
@@ -16,21 +10,17 @@ import {
 } from "../dtos/auth.dto";
 import { Types } from "mongoose";
 import User, { IUser } from "../../../database/models/user.model";
-import { Env } from "../../../config/env";
 
 class AuthService {
-  // openid-client's types may be loaded differently depending on installed version; use any to avoid TS import mismatch
-  private googleClient: any | undefined;
+  private googleClient: Client | undefined;
+  // store PKCE code_verifier per state value
+  private codeVerifierStore: Map<string, string> = new Map();
   private redirectUri: string = process.env.GOOGLE_REDIRECT_URI!;
-  // use string here to avoid overload resolution issues with the jsonwebtoken types
   private accessSecret: string = process.env.JWT_ACCESS_SECRET!;
   private refreshSecret: string = process.env.JWT_REFRESH_SECRET!;
 
-  private async getGoogleClient() {
+  private async getGoogleClient(): Promise<Client> {
     if (!this.googleClient) {
-      const OpenID = await loadOpenIDClient();
-      const Issuer = OpenID.Issuer || OpenID.default?.Issuer;
-      if (!Issuer) throw new Error("openid-client Issuer not found");
       const googleIssuer = await Issuer.discover("https://accounts.google.com");
       this.googleClient = new googleIssuer.Client({
         client_id: process.env.GOOGLE_CLIENT_ID!,
@@ -45,12 +35,12 @@ class AuthService {
   // Step 1: Redirect URL
   async getGoogleAuthUrl() {
     const client = await this.getGoogleClient();
-    const OpenID = await loadOpenIDClient();
-    const generators = OpenID.generators || OpenID.default?.generators;
-    if (!generators) throw new Error("openid-client generators not found");
     const state = generators.state();
     const codeVerifier = generators.codeVerifier();
     const codeChallenge = generators.codeChallenge(codeVerifier);
+
+    // persist verifier keyed by state so callback can validate the PKCE verifier
+    this.codeVerifierStore.set(state, codeVerifier);
 
     return {
       url: client.authorizationUrl({
@@ -60,15 +50,21 @@ class AuthService {
         state,
       }),
       codeVerifier,
+      state,
     };
   }
 
   // Step 2: Callback handler
   async handleGoogleCallback(
     code: string,
-    codeVerifier: string
+    state: string
   ): Promise<AuthResponseDto> {
     const client = await this.getGoogleClient();
+    const codeVerifier = this.codeVerifierStore.get(state);
+    if (!codeVerifier) throw new Error("Missing code verifier for state");
+    // remove to prevent reuse
+    this.codeVerifierStore.delete(state);
+
     const tokenSet = await client.callback(
       this.redirectUri,
       { code },
@@ -99,7 +95,7 @@ class AuthService {
     };
 
     const accessToken = jwt.sign(payload, this.accessSecret, {
-      expiresIn: "15m",
+      expiresIn: "1h",
     });
     const refreshToken = jwt.sign(payload, this.refreshSecret, {
       expiresIn: "7d",
@@ -165,28 +161,26 @@ class AuthService {
     };
 
     const accessToken = jwt.sign(payload, this.accessSecret, {
-      expiresIn: "1h",
+      expiresIn: "15m",
     });
     const refreshToken = jwt.sign(payload, this.refreshSecret, {
       expiresIn: "7d",
     });
-    user.refresh_token = refreshToken;
 
+    user.refresh_token = refreshToken;
     user.save();
 
     return {
       user: {
-        id: user.id,
+        id: user._id as Types.ObjectId,
         name: user.name,
         email: user.email,
         role: user.role,
       },
-      tokens: {
-        accessToken,
-        refreshToken,
-      },
+      tokens: { accessToken, refreshToken },
     };
   }
+
   verifyToken(token: string, isRefresh = false): TokenPayload {
     try {
       const secret = isRefresh ? this.refreshSecret : this.accessSecret;
