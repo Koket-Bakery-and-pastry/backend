@@ -35,6 +35,7 @@ export class OrdersService {
     data.payment_proof_url = `/uploads/${newFileName}`;
 
     const order = await this.ordersRepository.create(data);
+    console.log("Created order:", order);
     return order;
   }
 

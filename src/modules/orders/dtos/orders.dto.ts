@@ -42,11 +42,13 @@ export interface OrderItemResponseDTO {
 }
 
 export interface CreateOrderDTO {
-  order_items: Types.ObjectId[];
+  order_items: OrderItemDTO[];
   user_id?: Types.ObjectId;
   phone_number: string;
   delivery_time: Date;
   payment_proof_url: string;
+  upfront_paid?: number;
+  total_price?: number;
 }
 export interface CreateOrderWithFileDTO extends CreateOrderDTO {
   payment_proof_file: MulterFile;
@@ -61,7 +63,7 @@ export interface UpdateOrderDTO {
 
 export interface OrderResponseDTO {
   _id: Types.ObjectId;
-  order_items: Types.ObjectId[];
+  order_items: OrderItemResponseDTO[]; // Can be IDs or populated items
   user_id: Types.ObjectId;
   phone_number: string;
   total_price: number;

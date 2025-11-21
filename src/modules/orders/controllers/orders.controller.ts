@@ -32,6 +32,8 @@ export class OrdersController {
       }
       const orderItems: any = JSON.parse(req.body.order_items);
 
+      console.log("order items:", req.body);
+
       const data: CreateOrderWithFileDTO = {
         ...req.body,
         order_items: orderItems, // replace string with parsed array
