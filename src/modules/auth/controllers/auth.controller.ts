@@ -26,7 +26,7 @@ export class AuthController {
 
       // otherwise redirect to frontend with the returned code/token
       const frontendBase = (
-        process.env.FRONTEND_URL || "https://frontend-omega-dun-59.vercel.app/"
+        process.env.FRONTEND_URL || "http://localhost:3000"
       ).replace(/\/$/, "");
       const params = new URLSearchParams();
 
