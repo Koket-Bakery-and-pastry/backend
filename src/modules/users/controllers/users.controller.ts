@@ -4,6 +4,12 @@ import { HttpError } from "../../../core/errors/HttpError";
 import { UserService } from "../services/users.service";
 import { createUserSchema } from "../validators/users.validator";
 import { objectIdSchema } from "../../../core/validators/objectId.validation";
+import { AuthRequest } from "../../../core/middlewares/auth.middleware";
+
+// Extend Request to include file from multer
+interface RequestWithFile extends AuthRequest {
+  file?: Express.Multer.File;
+}
 
 // Users controller placeholder.
 export class UserController {
@@ -12,6 +18,66 @@ export class UserController {
   constructor() {
     this.userService = new UserService();
   }
+
+  /**
+   * Get current user's profile
+   */
+  getProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        return next(new HttpError(401, "Unauthorized"));
+      }
+      const user = await this.userService.getProfile(
+        req.user.userId.toString()
+      );
+      res.status(200).json({
+        message: "Profile retrieved successfully",
+        user,
+      });
+    } catch (error: any) {
+      next(
+        error instanceof HttpError
+          ? error
+          : new HttpError(500, "Internal Server Error")
+      );
+    }
+  };
+
+  /**
+   * Update current user's profile image
+   */
+  updateProfileImage = async (
+    req: RequestWithFile,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.user) {
+        return next(new HttpError(401, "Unauthorized"));
+      }
+
+      if (!req.file) {
+        return next(new HttpError(400, "Profile image file is required"));
+      }
+
+      const imageUrl = `/${req.file.path.replace(/\\/g, "/")}`;
+      const user = await this.userService.updateProfileImage(
+        req.user.userId.toString(),
+        imageUrl
+      );
+
+      res.status(200).json({
+        message: "Profile image updated successfully",
+        user,
+      });
+    } catch (error: any) {
+      next(
+        error instanceof HttpError
+          ? error
+          : new HttpError(500, "Internal Server Error")
+      );
+    }
+  };
 
   /**
    * Get all users (admin only)

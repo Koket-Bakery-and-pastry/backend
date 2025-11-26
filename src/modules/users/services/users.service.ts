@@ -78,4 +78,33 @@ export class UserService {
       throw new HttpError(404, "User not found");
     }
   }
+
+  /**
+   * Updates a user's profile image.
+   * @param id The user ID.
+   * @param imageUrl The new profile image URL.
+   * @returns The updated user.
+   * @throws HttpError if user not found.
+   */
+  async updateProfileImage(id: string, imageUrl: string): Promise<IUser> {
+    const user = await this.userRepository.updateProfileImage(id, imageUrl);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+    return user;
+  }
+
+  /**
+   * Gets the current authenticated user's profile.
+   * @param id The user ID.
+   * @returns The user without sensitive fields.
+   * @throws HttpError if user not found.
+   */
+  async getProfile(id: string): Promise<IUser> {
+    const user = await this.userRepository.findByIdSafe(id);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+    return user;
+  }
 }

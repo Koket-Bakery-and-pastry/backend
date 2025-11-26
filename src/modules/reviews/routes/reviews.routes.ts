@@ -1,12 +1,25 @@
 import { Router } from "express";
 import { ProductReviewController } from "../controllers/reviews.controller";
+import { authenticate } from "../../../core/middlewares/auth.middleware";
+
 const router = Router();
 const productReviewController = new ProductReviewController();
 
-router.post("/", productReviewController.createOrUpdateProductReview);
+// Public routes
 router.get("/", productReviewController.getAllProductReviews);
 router.get("/:id", productReviewController.getProductReviewById);
-router.patch("/:id", productReviewController.updateProductReview);
-router.delete("/:id", productReviewController.deleteProductReview);
+
+// Authenticated routes
+router.post(
+  "/",
+  authenticate,
+  productReviewController.createOrUpdateProductReview
+);
+router.patch("/:id", authenticate, productReviewController.updateProductReview);
+router.delete(
+  "/:id",
+  authenticate,
+  productReviewController.deleteProductReview
+);
 
 export default router;
