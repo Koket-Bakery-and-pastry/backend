@@ -2,6 +2,10 @@ import { Router } from "express";
 import multer from "multer";
 import path from "path";
 import { ProductController } from "../controllers/products.controller";
+import {
+  authenticate,
+  authorize,
+} from "../../../core/middlewares/auth.middleware";
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, "uploads/products"),
@@ -91,6 +95,8 @@ const safeUploadFields = (fields: any) => {
 
 router.post(
   "/",
+  authenticate,
+  authorize("admin"),
   maybeLogContentType,
   (req: any, res: any, next: any) => {
     const ct = (req.headers && req.headers["content-type"]) || "";
@@ -108,8 +114,11 @@ router.post(
   },
   productController.createProduct
 );
+
+// Public routes
 router.get("/", productController.getAllProducts);
 router.get("/:id", productController.getProductById);
+
 // For updates we accept either JSON body or multipart/form-data (file + fields).
 // If the request is multipart, run our validation + multer stack; otherwise skip it.
 const optionalMultipartForUpdate = (req: any, res: any, next: any) => {
@@ -128,7 +137,19 @@ const optionalMultipartForUpdate = (req: any, res: any, next: any) => {
   return next();
 };
 
-router.put("/:id", optionalMultipartForUpdate, productController.updateProduct);
-router.delete("/:id", productController.deleteProduct);
+// Admin only routes for update and delete
+router.put(
+  "/:id",
+  authenticate,
+  authorize("admin"),
+  optionalMultipartForUpdate,
+  productController.updateProduct
+);
+router.delete(
+  "/:id",
+  authenticate,
+  authorize("admin"),
+  productController.deleteProduct
+);
 
 export default router;

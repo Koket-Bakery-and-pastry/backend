@@ -9,10 +9,10 @@ import {
   UpdateOrderDTO,
   OrderItemDTO,
 } from "../dtos/orders.dto";
-import type { Multer } from "multer";
-import { getPayloadFromAuthHeader } from "../../../shared/utils/jwt";
+import { AuthRequest } from "../../../core/middlewares/auth.middleware";
+
 // Extend Express Request type to include 'file' property
-interface RequestWithFile extends Request {
+interface RequestWithFile extends AuthRequest {
   file?: Express.Multer.File;
 }
 
@@ -24,12 +24,16 @@ export class OrdersController {
 
   async createOrder(req: RequestWithFile, res: Response): Promise<void> {
     try {
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
+
+      if (!req.file) {
+        res.status(400).json({ message: "Payment proof file is required" });
+        return;
+      }
+
       const orderItems: any = JSON.parse(req.body.order_items);
 
       console.log("order items:", req.body);
@@ -40,7 +44,7 @@ export class OrdersController {
         payment_proof_file: req.file, // file from multer
       };
 
-      data.user_id = payload.userId;
+      data.user_id = req.user.userId;
       const order = await this.ordersService.createOrder(data);
 
       res.status(201).json(order);
@@ -49,12 +53,10 @@ export class OrdersController {
     }
   }
 
-  async getOrderById(req: Request, res: Response): Promise<void> {
+  async getOrderById(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
@@ -64,25 +66,32 @@ export class OrdersController {
         res.status(404).json({ message: "Order not found" });
         return;
       }
+
+      // Check if user is owner or admin
+      if (
+        order.user_id.toString() !== req.user.userId.toString() &&
+        req.user.role !== "admin"
+      ) {
+        res.status(403).json({ message: "Forbidden" });
+        return;
+      }
+
       res.status(200).json(order);
     } catch (error) {
       res.status(500).json({ message: "Internal server error", error });
     }
   }
-  async updateOrder(req: Request, res: Response): Promise<void> {
+
+  async updateOrder(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
 
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
-      if (payload.role !== "admin") {
-        res.status(403).json({ message: "Forbidden" });
-        return;
-      }
+
+      // Admin check is handled by authorize middleware in routes
 
       const data: Partial<UpdateOrderDTO> = req.body;
       const updatedOrder = await this.ordersService.updateOrder(id, data);
@@ -95,36 +104,28 @@ export class OrdersController {
       res.status(500).json({ message: "Internal server error", error });
     }
   }
-  async getAllOrders(req: Request, res: Response): Promise<void> {
+
+  async getAllOrders(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
-      if (payload.role !== "admin") {
-        res.status(403).json({ message: "Forbidden" });
-        return;
-      }
+      // Admin check is handled by authorize middleware in routes
       const orders = await this.ordersService.getAllOrders();
       res.status(200).json(orders);
     } catch (error) {
       res.status(500).json({ message: "Internal server error", error });
     }
   }
-  async filterOrdersByStatus(req: Request, res: Response): Promise<void> {
+
+  async filterOrdersByStatus(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
-      if (payload.role !== "admin") {
-        res.status(403).json({ message: "Forbidden" });
-        return;
-      }
+      // Admin check is handled by authorize middleware in routes
 
       const { status } = req.query;
       if (!status || typeof status !== "string" || !status.trim()) {
@@ -137,17 +138,15 @@ export class OrdersController {
       res.status(500).json({ message: "Internal server error", error });
     }
   }
-  async getOrdersByUserId(req: Request, res: Response): Promise<void> {
+
+  async getOrdersByUserId(req: AuthRequest, res: Response): Promise<void> {
     try {
-      console.log("ezis dershalew ");
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
 
-      var userId = payload.userId;
+      const userId = req.user.userId;
 
       console.log(userId, userId.toString());
 
@@ -168,16 +167,14 @@ export class OrderItemController {
     this.orderItemService = new OrderItemService();
   }
 
-  async getOrderItemsByUserId(req: Request, res: Response): Promise<void> {
+  async getOrderItemsByUserId(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
 
-      const userId = payload.userId;
+      const userId = req.user.userId;
       const items = await this.orderItemService.getOrderItemsByUserId(userId);
       res.status(200).json(items);
     } catch (error) {
@@ -185,11 +182,9 @@ export class OrderItemController {
     }
   }
 
-  async createOrderItem(req: Request, res: Response): Promise<void> {
+  async createOrderItem(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
@@ -200,7 +195,7 @@ export class OrderItemController {
         return;
       }
 
-      data.user_id = payload.userId;
+      data.user_id = req.user.userId;
       const item = await this.orderItemService.createOrderItem(data);
       res.status(201).json(item);
     } catch (error) {
@@ -208,11 +203,9 @@ export class OrderItemController {
     }
   }
 
-  async getOrderItemById(req: Request, res: Response): Promise<void> {
+  async getOrderItemById(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
@@ -232,18 +225,16 @@ export class OrderItemController {
     }
   }
 
-  async updateOrderItem(req: Request, res: Response): Promise<void> {
+  async updateOrderItem(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
 
       const id = req.params.id;
       const data: UpdateOrderItemDTO = req.body;
-      const userId = payload.userId;
+      const userId = req.user.userId;
       if (!id || typeof id !== "string" || !id.trim()) {
         res.status(400).json({ message: "Invalid order item id" });
         return;
@@ -263,17 +254,15 @@ export class OrderItemController {
     }
   }
 
-  async deleteOrderItem(req: Request, res: Response): Promise<void> {
+  async deleteOrderItem(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const authHeader = req.headers.authorization || "";
-      const payload = getPayloadFromAuthHeader(authHeader);
-      if (!payload) {
+      if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
 
       const id = req.params.id;
-      const userId = payload.userId;
+      const userId = req.user.userId;
       if (!id || typeof id !== "string" || !id.trim()) {
         res.status(400).json({ message: "Invalid order item id" });
         return;

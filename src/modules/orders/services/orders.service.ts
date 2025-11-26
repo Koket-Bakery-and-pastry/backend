@@ -23,16 +23,20 @@ export class OrdersService {
   }
 
   async createOrder(data: CreateOrderWithFileDTO): Promise<OrderResponseDTO> {
-    const uploadDir = path.join(__dirname, "../../uploads");
+    // Use project root uploads folder
+    const uploadDir = path.join(process.cwd(), "uploads/orders");
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    const newFileName = `${Date.now()}-${data.payment_proof_file.originalname}`;
+    const ext = path.extname(data.payment_proof_file.originalname) || "";
+    const newFileName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}${ext}`;
     const filePath = path.join(uploadDir, newFileName);
 
     await fs.promises.rename(data.payment_proof_file.path, filePath);
-    data.payment_proof_url = `/uploads/${newFileName}`;
+    data.payment_proof_url = `/uploads/orders/${newFileName}`;
 
     const order = await this.ordersRepository.create(data);
     console.log("Created order:", order);

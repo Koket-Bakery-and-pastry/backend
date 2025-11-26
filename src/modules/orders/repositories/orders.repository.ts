@@ -14,9 +14,17 @@ import {
 export class OrdersRepository {
   // helper to convert populated product_id into `product`
   private mapOrder(orderDoc: any): OrderResponseDTO {
-    const obj = orderDoc.toObject() as any;
+    const obj = orderDoc.toObject ? orderDoc.toObject() : orderDoc;
     if (Array.isArray(obj.order_items)) {
       obj.order_items = obj.order_items.map((item: any) => {
+        // Handle case where item might be just an ObjectId (not populated)
+        if (
+          !item ||
+          typeof item !== "object" ||
+          item._bsontype === "ObjectId"
+        ) {
+          return item;
+        }
         if (item.product_id && typeof item.product_id === "object") {
           item.product = item.product_id;
           delete item.product_id;
@@ -28,7 +36,30 @@ export class OrdersRepository {
   }
 
   async create(data: CreateOrderDTO): Promise<OrderResponseDTO> {
-    const order = new Order(data);
+    // First, create OrderItem documents from the order_items array
+    const orderItemIds: Types.ObjectId[] = [];
+
+    if (data.order_items && Array.isArray(data.order_items)) {
+      for (const item of data.order_items) {
+        const orderItem = new OrderItem({
+          product_id: item.product_id,
+          user_id: data.user_id,
+          kilo: item.kilo,
+          pieces: item.pieces,
+          quantity: item.quantity || 1,
+          custom_text: item.custom_text,
+          additional_description: item.additional_description,
+        });
+        await orderItem.save();
+        orderItemIds.push(orderItem._id as Types.ObjectId);
+      }
+    }
+
+    // Create the order with the OrderItem IDs
+    const order = new Order({
+      ...data,
+      order_items: orderItemIds,
+    });
     console.log("Saving order:", order);
     await order.save();
 

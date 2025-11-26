@@ -59,4 +59,35 @@ export class UserRepository {
     const result = await User.findByIdAndDelete(id).exec();
     return !!result;
   }
+
+  /**
+   * Updates a user's profile image URL.
+   * @param id The user ID.
+   * @param imageUrl The new profile image URL.
+   * @returns The updated user document without sensitive fields.
+   */
+  async updateProfileImage(
+    id: string,
+    imageUrl: string
+  ): Promise<IUser | null> {
+    return User.findByIdAndUpdate(
+      id,
+      { profile_image_url: imageUrl },
+      { new: true }
+    )
+      .select("-password_hash -refresh_token")
+      .exec();
+  }
+
+  /**
+   * Updates a user by ID.
+   * @param id The user ID.
+   * @param updateData The data to update.
+   * @returns The updated user document without sensitive fields.
+   */
+  async update(id: string, updateData: Partial<IUser>): Promise<IUser | null> {
+    return User.findByIdAndUpdate(id, updateData, { new: true })
+      .select("-password_hash -refresh_token")
+      .exec();
+  }
 }

@@ -7,6 +7,7 @@ export interface IUser extends Document {
   role: "customer" | "admin";
   refresh_token?: string;
   googleId: string;
+  profile_image_url?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -39,6 +40,9 @@ const userSchema = new Schema<IUser>({
   googleId: {
     type: String,
     default: "",
+  },
+  profile_image_url: {
+    type: String,
   },
 
   created_at: {
