@@ -23,4 +23,12 @@ router.get(
   userController.getUserById
 );
 
+// DELETE /api/v1/users/:id - Delete user by ID (admin only)
+router.delete(
+  "/:id",
+  authenticate,
+  authorize("admin"),
+  userController.deleteUser
+);
+
 export default router;

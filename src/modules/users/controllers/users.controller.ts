@@ -99,4 +99,23 @@ export class UserController {
       next(new HttpError(500, "Internal Server Error"));
     }
   };
+
+  /**
+   * Deletes a user by ID (admin only).
+   */
+  deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = objectIdSchema.parse(req.params.id);
+      await this.userService.deleteUser(id);
+      res.status(200).json({ message: "User deleted successfully" });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return next(new HttpError(400, "Invalid user ID"));
+      }
+      if (error instanceof HttpError) {
+        return next(error);
+      }
+      next(new HttpError(500, "Internal Server Error"));
+    }
+  };
 }

@@ -66,4 +66,16 @@ export class UserService {
     }
     return user;
   }
+
+  /**
+   * Deletes a user by ID (admin only).
+   * @param id The user ID.
+   * @throws HttpError if user not found.
+   */
+  async deleteUser(id: string): Promise<void> {
+    const deleted = await this.userRepository.delete(id);
+    if (!deleted) {
+      throw new HttpError(404, "User not found");
+    }
+  }
 }

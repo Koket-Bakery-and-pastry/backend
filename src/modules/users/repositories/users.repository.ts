@@ -49,4 +49,14 @@ export class UserRepository {
   async findByIdSafe(id: string): Promise<IUser | null> {
     return User.findById(id).select("-password_hash -refresh_token").exec();
   }
+
+  /**
+   * Deletes a user by ID.
+   * @param id The user ID.
+   * @returns True if user was deleted, false otherwise.
+   */
+  async delete(id: string): Promise<boolean> {
+    const result = await User.findByIdAndDelete(id).exec();
+    return !!result;
+  }
 }
