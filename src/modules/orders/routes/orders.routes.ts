@@ -7,14 +7,21 @@ import {
 } from "../controllers/orders.controller";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import {
   authenticate,
   authorize,
 } from "../../../core/middlewares/auth.middleware";
 
+// Ensure temp directory exists for file uploads
+const tempDir = path.join(process.cwd(), "temp");
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+
 // Configure multer storage for order payment proofs
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, "temp/"),
+  destination: (_req, _file, cb) => cb(null, tempDir),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname) || "";
     const name = `${Date.now()}-${Math.random()
