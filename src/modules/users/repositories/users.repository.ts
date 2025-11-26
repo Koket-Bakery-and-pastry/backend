@@ -32,4 +32,21 @@ export class UserRepository {
   async findById(id: string): Promise<IUser | null> {
     return User.findById(id).exec();
   }
+
+  /**
+   * Gets all users from the database.
+   * @returns An array of all user documents.
+   */
+  async findAll(): Promise<IUser[]> {
+    return User.find().select("-password_hash -refresh_token").exec();
+  }
+
+  /**
+   * Gets a user by ID without sensitive fields.
+   * @param id The user ID.
+   * @returns The user document without password hash and refresh token.
+   */
+  async findByIdSafe(id: string): Promise<IUser | null> {
+    return User.findById(id).select("-password_hash -refresh_token").exec();
+  }
 }

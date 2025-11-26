@@ -44,4 +44,26 @@ export class UserService {
     const { password_hash: _, ...userWithoutHash } = newUser.toObject();
     return userWithoutHash;
   }
+
+  /**
+   * Gets all users (admin only).
+   * @returns An array of all users without sensitive fields.
+   */
+  async getAllUsers(): Promise<IUser[]> {
+    return this.userRepository.findAll();
+  }
+
+  /**
+   * Gets a user by ID (admin only).
+   * @param id The user ID.
+   * @returns The user without sensitive fields.
+   * @throws HttpError if user not found.
+   */
+  async getUserById(id: string): Promise<IUser> {
+    const user = await this.userRepository.findByIdSafe(id);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+    return user;
+  }
 }
