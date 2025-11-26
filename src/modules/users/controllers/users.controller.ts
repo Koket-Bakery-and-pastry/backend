@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { HttpError } from "../../../core/errors/HttpError";
 import { UserService } from "../services/users.service";
 import { createUserSchema } from "../validators/users.validator";
+import { objectIdSchema } from "../../../core/validators/objectId.validation";
 
 // Users controller placeholder.
 export class UserController {
@@ -11,6 +12,48 @@ export class UserController {
   constructor() {
     this.userService = new UserService();
   }
+
+  /**
+   * Get all users (admin only)
+   */
+  getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const users = await this.userService.getAllUsers();
+      res.status(200).json({
+        message: "Users retrieved successfully",
+        users,
+      });
+    } catch (error: any) {
+      next(
+        error instanceof HttpError
+          ? error
+          : new HttpError(500, "Internal Server Error")
+      );
+    }
+  };
+
+  /**
+   * Get user by ID (admin only)
+   */
+  getUserById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = objectIdSchema.parse(req.params.id);
+      const user = await this.userService.getUserById(id);
+      res.status(200).json({
+        message: "User retrieved successfully",
+        user,
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return next(new HttpError(400, "Invalid user ID format"));
+      }
+      next(
+        error instanceof HttpError
+          ? error
+          : new HttpError(500, "Internal Server Error")
+      );
+    }
+  };
 
   registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {

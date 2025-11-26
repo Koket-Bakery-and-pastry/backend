@@ -18,6 +18,47 @@ export class ProductController {
     this.subcategoryRepository = new SubcategoryRepository();
   }
 
+  // Extract uploaded file from request
+  private extractUploadedFile(req: Request): Express.Multer.File | undefined {
+    const r: any = req;
+    if (r.file) return r.file;
+    if (r.files) {
+      if (Array.isArray(r.files.image) && r.files.image.length)
+        return r.files.image[0];
+      if (Array.isArray(r.files.images) && r.files.images.length)
+        return r.files.images[0];
+    }
+    return undefined;
+  }
+
+  // Extract all uploaded images from request
+  private extractUploadedImages(req: Request): Express.Multer.File[] {
+    const r: any = req;
+    const images: Express.Multer.File[] = [];
+
+    if (r.files) {
+      if (Array.isArray(r.files.images)) {
+        images.push(...r.files.images);
+      }
+      if (Array.isArray(r.files.image)) {
+        images.push(...r.files.image);
+      }
+    }
+
+    return images;
+  }
+
+  // Map alternative field names to standard names
+  private mapFieldNames(body: any): void {
+    const mapField = (from: string, to: string) => {
+      if (body[to] === undefined && body[from] !== undefined) {
+        body[to] = body[from];
+      }
+    };
+    mapField("categoryId", "category_id");
+    mapField("subcategoryId", "subcategory_id");
+  }
+
   // Enrich a product object with pricing info from its subcategory for backward compatibility
   private async enrichProductWithPricing(productObj: any) {
     try {
@@ -71,34 +112,21 @@ export class ProductController {
   createProduct = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const bodyWithImage = { ...req.body } as any;
-      const r: any = req;
-      let uploadedFile: Express.Multer.File | undefined;
-      if (r.file) uploadedFile = r.file;
-      else if (r.files) {
-        if (Array.isArray(r.files.image) && r.files.image.length)
-          uploadedFile = r.files.image[0];
-        else if (Array.isArray(r.files.images) && r.files.images.length)
-          uploadedFile = r.files.images[0];
-      }
 
+      const uploadedFile = this.extractUploadedFile(req);
       if (uploadedFile) {
         bodyWithImage.image_url = `/${uploadedFile.path.replace(/\\/g, "/")}`;
       }
 
-      const mapField = (from: string, to: string) => {
-        if (
-          bodyWithImage[to] === undefined &&
-          bodyWithImage[from] !== undefined
-        ) {
-          bodyWithImage[to] = bodyWithImage[from];
-        }
-        const rb: any = req.body as any;
-        if (rb && rb[to] === undefined && rb[from] !== undefined)
-          rb[to] = rb[from];
-      };
+      // Handle multiple images
+      const uploadedImages = this.extractUploadedImages(req);
+      if (uploadedImages.length > 0) {
+        bodyWithImage.images = uploadedImages.map(
+          (file) => `/${file.path.replace(/\\/g, "/")}`
+        );
+      }
 
-      mapField("categoryId", "category_id");
-      mapField("subcategoryId", "subcategory_id");
+      this.mapFieldNames(bodyWithImage);
 
       const productData = createProductSchema.parse(bodyWithImage);
       const newProduct = await this.productService.createProduct(productData);
@@ -197,34 +225,21 @@ export class ProductController {
     try {
       const id = objectIdSchema.parse(req.params.id);
       const bodyWithImage = { ...req.body } as any;
-      const r2: any = req;
-      let uploadedFile2: Express.Multer.File | undefined;
-      if (r2.file) uploadedFile2 = r2.file;
-      else if (r2.files) {
-        if (Array.isArray(r2.files.image) && r2.files.image.length)
-          uploadedFile2 = r2.files.image[0];
-        else if (Array.isArray(r2.files.images) && r2.files.images.length)
-          uploadedFile2 = r2.files.images[0];
+
+      const uploadedFile = this.extractUploadedFile(req);
+      if (uploadedFile) {
+        bodyWithImage.image_url = `/${uploadedFile.path.replace(/\\/g, "/")}`;
       }
 
-      if (uploadedFile2) {
-        bodyWithImage.image_url = `/${uploadedFile2.path.replace(/\\/g, "/")}`;
+      // Handle multiple images
+      const uploadedImages = this.extractUploadedImages(req);
+      if (uploadedImages.length > 0) {
+        bodyWithImage.images = uploadedImages.map(
+          (file) => `/${file.path.replace(/\\/g, "/")}`
+        );
       }
 
-      const mapField2 = (from: string, to: string) => {
-        if (
-          bodyWithImage[to] === undefined &&
-          bodyWithImage[from] !== undefined
-        ) {
-          bodyWithImage[to] = bodyWithImage[from];
-        }
-        const rb2: any = req.body as any;
-        if (rb2 && rb2[to] === undefined && rb2[from] !== undefined)
-          rb2[to] = rb2[from];
-      };
-
-      mapField2("categoryId", "category_id");
-      mapField2("subcategoryId", "subcategory_id");
+      this.mapFieldNames(bodyWithImage);
 
       const updateData = updateProductSchema.parse(bodyWithImage);
 

@@ -99,7 +99,7 @@ router.post(
       return validateMultipart(req, res, () => {
         return safeUploadFields([
           { name: "image", maxCount: 1 },
-          { name: "images", maxCount: 5 },
+          { name: "images", maxCount: 10 },
         ])(req, res, next);
       });
     }
@@ -120,7 +120,7 @@ const optionalMultipartForUpdate = (req: any, res: any, next: any) => {
       validateMultipart(req, res, () => {
         return safeUploadFields([
           { name: "image", maxCount: 1 },
-          { name: "images", maxCount: 5 },
+          { name: "images", maxCount: 10 },
         ])(req, res, next);
       });
     });

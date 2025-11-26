@@ -3,6 +3,7 @@ import { Schema, model, Document, Types } from "mongoose";
 export interface IProduct extends Document {
   name: string;
   image_url?: string;
+  images?: string[]; // Array of image URLs
   category_id: Types.ObjectId;
   subcategory_id: Types.ObjectId;
   description?: string;
@@ -12,7 +13,8 @@ export interface IProduct extends Document {
 
 const productSchema = new Schema<IProduct>({
   name: { type: String, required: true, trim: true },
-  image_url: { type: String },
+  image_url: { type: String }, // Keep for backward compatibility (main image)
+  images: [{ type: String }], // Array of additional images
   category_id: { type: Schema.Types.ObjectId, ref: "Category", required: true },
   subcategory_id: {
     type: Schema.Types.ObjectId,

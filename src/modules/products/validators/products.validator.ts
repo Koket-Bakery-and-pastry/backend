@@ -7,6 +7,7 @@ import { objectIdSchema } from "../../../core/validators/objectId.validation";
 export const createProductSchema = z.object({
   name: z.string().trim().min(1, "Product name cannot be empty."),
   image_url: z.string().optional(),
+  images: z.array(z.string()).optional(),
   category_id: objectIdSchema.min(1, "Category ID is required."),
   subcategory_id: objectIdSchema.min(1, "Subcategory ID is required."),
   description: z.string().trim().optional(),
@@ -31,6 +32,7 @@ export const updateProductSchema = z
           );
         }
       }, "Image URL must be a valid absolute URL or a local uploads path (e.g. /uploads/products/...)."),
+    images: z.array(z.string()).optional(),
     category_id: objectIdSchema.optional(),
     subcategory_id: objectIdSchema.optional(),
     description: z.string().trim().optional(),
