@@ -1,8 +1,10 @@
 import { ProductRepository } from "../repositories/products.repository";
 import { CategoryRepository } from "../../catalog/repositories/category.repository";
 import { SubcategoryRepository } from "../../catalog/repositories/subcategory.repository";
+import { ProductReviewRepository } from "../../reviews/repositories/reviews.repository";
 import { CreateProductDto, UpdateProductDto } from "../dtos/products.dto";
 import { IProduct } from "../../../database/models/product.model";
+import { IProductReview } from "../../../database/models/productReview.model";
 import { HttpError } from "../../../core/errors/HttpError";
 import fs from "fs";
 import path from "path";
@@ -11,11 +13,13 @@ export class ProductService {
   private productRepository: ProductRepository;
   private categoryRepository: CategoryRepository;
   private subcategoryRepository: SubcategoryRepository;
+  private productReviewRepository: ProductReviewRepository;
 
   constructor() {
     this.productRepository = new ProductRepository();
     this.categoryRepository = new CategoryRepository();
     this.subcategoryRepository = new SubcategoryRepository();
+    this.productReviewRepository = new ProductReviewRepository();
   }
 
   /**
@@ -120,14 +124,16 @@ export class ProductService {
 
   /**
    * Retrieves a single product by its ID with populated category and subcategory details.
-   * Also fetches related products from the same subcategory/category.
+   * Also fetches related products from the same subcategory/category and product reviews.
    * @param id The ID of the product.
-   * @returns The product with related products.
+   * @returns The product with related products and reviews.
    * @throws HttpError if product is not found.
    */
   async getProductById(
     id: string
-  ): Promise<IProduct & { related_products?: IProduct[] }> {
+  ): Promise<
+    IProduct & { related_products?: IProduct[]; reviews?: IProductReview[] }
+  > {
     const product = await this.productRepository.findById(id);
     if (!product) {
       throw new HttpError(404, `Product with ID '${id}' not found.`);
@@ -145,18 +151,18 @@ export class ProductService {
         ? (product.subcategory_id as any)._id.toString()
         : product.subcategory_id.toString();
 
-    // Fetch related products
-    const relatedProducts = await this.productRepository.findRelatedProducts(
-      id,
-      categoryId,
-      subcategoryId
-    );
+    // Fetch related products and reviews in parallel
+    const [relatedProducts, reviews] = await Promise.all([
+      this.productRepository.findRelatedProducts(id, categoryId, subcategoryId),
+      this.productReviewRepository.findAll({ productId: id }),
+    ]);
 
-    // Attach related products to the product object
+    // Attach related products and reviews to the product object
     const productWithRelated = product.toObject ? product.toObject() : product;
     return {
       ...productWithRelated,
       related_products: relatedProducts,
+      reviews: reviews,
     };
   }
 
