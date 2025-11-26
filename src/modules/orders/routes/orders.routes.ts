@@ -63,14 +63,16 @@ router.put("/:id", authenticate, authorize("admin"), (req, res) =>
 );
 
 // OrderItem routes
-// Get order item by ID (authenticated users only)
-router.get("/items/:id", authenticate, (req, res) =>
-  orderItemController.getOrderItemById(req, res)
-);
+// IMPORTANT: Static routes must come BEFORE parameterized routes
 
 // Get order items by user ID (authenticated users only)
 router.get("/items/user", authenticate, (req, res) =>
   orderItemController.getOrderItemsByUserId(req, res)
+);
+
+// Get order item by ID (authenticated users only)
+router.get("/items/:id", authenticate, (req, res) =>
+  orderItemController.getOrderItemById(req, res)
 );
 
 // Create a new order item (authenticated users only)
