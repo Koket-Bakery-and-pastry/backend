@@ -5,6 +5,7 @@ import { UserService } from "../services/users.service";
 import { createUserSchema } from "../validators/users.validator";
 import { objectIdSchema } from "../../../core/validators/objectId.validation";
 import { AuthRequest } from "../../../core/middlewares/auth.middleware";
+import { UpdateProfileDto } from "../dtos/users.dto";
 
 // Extend Request to include file from multer
 interface RequestWithFile extends AuthRequest {
@@ -68,6 +69,50 @@ export class UserController {
 
       res.status(200).json({
         message: "Profile image updated successfully",
+        user,
+      });
+    } catch (error: any) {
+      next(
+        error instanceof HttpError
+          ? error
+          : new HttpError(500, "Internal Server Error")
+      );
+    }
+  };
+
+  /**
+   * Update current user's profile
+   */
+  updateProfile = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.user) {
+        return next(new HttpError(401, "Unauthorized"));
+      }
+
+      const data: UpdateProfileDto = {
+        name: req.body.name,
+        email: req.body.email,
+        phone_number: req.body.phone_number,
+      };
+
+      // Remove undefined fields
+      Object.keys(data).forEach((key) => {
+        if (data[key as keyof UpdateProfileDto] === undefined) {
+          delete data[key as keyof UpdateProfileDto];
+        }
+      });
+
+      const user = await this.userService.updateProfile(
+        req.user.userId.toString(),
+        data
+      );
+
+      res.status(200).json({
+        message: "Profile updated successfully",
         user,
       });
     } catch (error: any) {

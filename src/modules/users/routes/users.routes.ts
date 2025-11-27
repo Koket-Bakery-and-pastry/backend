@@ -36,6 +36,9 @@ router.post("/register", userController.registerUser);
 // GET /api/v1/users/profile - Get current user's profile (authenticated)
 router.get("/profile", authenticate, userController.getProfile);
 
+// PUT /api/v1/users/profile - Update current user's profile (authenticated)
+router.put("/profile", authenticate, userController.updateProfile);
+
 // PUT /api/v1/users/profile/image - Update current user's profile image (authenticated)
 router.put(
   "/profile/image",

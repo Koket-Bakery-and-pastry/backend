@@ -1,6 +1,6 @@
 import { HttpError } from "../../../core/errors/HttpError";
 import { IUser } from "../../../database/models/user.model";
-import { CreateUserDto } from "../dtos/users.dto";
+import { CreateUserDto, UpdateProfileDto } from "../dtos/users.dto";
 import { UserRepository } from "../repositories/users.repository";
 import * as bcrypt from "bcrypt";
 import Order from "../../../database/models/order.model";
@@ -90,6 +90,29 @@ export class UserService {
    */
   async updateProfileImage(id: string, imageUrl: string): Promise<IUser> {
     const user = await this.userRepository.updateProfileImage(id, imageUrl);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+    return user;
+  }
+
+  /**
+   * Updates the current user's profile.
+   * @param id The user ID.
+   * @param data The profile data to update.
+   * @returns The updated user.
+   * @throws HttpError if user not found or email already exists.
+   */
+  async updateProfile(id: string, data: UpdateProfileDto): Promise<IUser> {
+    // Check if email is being updated and already exists
+    if (data.email) {
+      const existingUser = await this.userRepository.findByEmail(data.email);
+      if (existingUser && existingUser._id.toString() !== id) {
+        throw new HttpError(409, "Email already in use by another account");
+      }
+    }
+
+    const user = await this.userRepository.updateProfile(id, data);
     if (!user) {
       throw new HttpError(404, "User not found");
     }

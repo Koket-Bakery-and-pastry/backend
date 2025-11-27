@@ -5,6 +5,12 @@ export interface CreateUserDto {
   password?: string;
 }
 
+export interface UpdateProfileDto {
+  name?: string;
+  email?: string;
+  phone_number?: string;
+}
+
 export interface UserResponseDto {
   id: string;
   name: string;
