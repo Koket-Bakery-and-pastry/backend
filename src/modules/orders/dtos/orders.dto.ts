@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 type MulterFile = any;
 
 export interface OrderItemDTO {
+  _id?: string; // ID of existing order item to mark as ordered
   product_id?: string;
   kilo?: number;
   pieces?: number;
@@ -38,6 +39,7 @@ export interface OrderItemResponseDTO {
   quantity: number;
   custom_text?: string;
   additional_description?: string;
+  is_ordered: boolean;
   created_at: Date;
 }
 

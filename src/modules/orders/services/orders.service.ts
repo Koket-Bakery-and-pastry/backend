@@ -18,8 +18,10 @@ import { ObjectId } from "mongodb";
 // Orders service placeholder.
 export class OrdersService {
   private ordersRepository: OrdersRepository;
+  private orderItemRepository: OrderItemRepository;
   constructor() {
     this.ordersRepository = new OrdersRepository();
+    this.orderItemRepository = new OrderItemRepository();
   }
 
   async createOrder(data: CreateOrderWithFileDTO): Promise<OrderResponseDTO> {
@@ -40,6 +42,7 @@ export class OrdersService {
 
     const order = await this.ordersRepository.create(data);
     console.log("Created order:", order);
+
     return order;
   }
 

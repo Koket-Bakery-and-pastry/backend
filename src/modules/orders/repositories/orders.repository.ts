@@ -36,22 +36,30 @@ export class OrdersRepository {
   }
 
   async create(data: CreateOrderDTO): Promise<OrderResponseDTO> {
-    // First, create OrderItem documents from the order_items array
     const orderItemIds: Types.ObjectId[] = [];
 
     if (data.order_items && Array.isArray(data.order_items)) {
       for (const item of data.order_items) {
-        const orderItem = new OrderItem({
-          product_id: item.product_id,
-          user_id: data.user_id,
-          kilo: item.kilo,
-          pieces: item.pieces,
-          quantity: item.quantity || 1,
-          custom_text: item.custom_text,
-          additional_description: item.additional_description,
-        });
-        await orderItem.save();
-        orderItemIds.push(orderItem._id as Types.ObjectId);
+        if (item._id) {
+          // Use existing order item - just mark it as ordered
+          const existingId = new Types.ObjectId(item._id);
+          await OrderItem.findByIdAndUpdate(existingId, { is_ordered: true });
+          orderItemIds.push(existingId);
+        } else {
+          // Create new order item
+          const orderItem = new OrderItem({
+            product_id: item.product_id,
+            user_id: data.user_id,
+            kilo: item.kilo,
+            pieces: item.pieces,
+            quantity: item.quantity || 1,
+            custom_text: item.custom_text,
+            additional_description: item.additional_description,
+            is_ordered: true,
+          });
+          await orderItem.save();
+          orderItemIds.push(orderItem._id as Types.ObjectId);
+        }
       }
     }
 
@@ -175,10 +183,28 @@ export class OrderItemRepository {
   async findAllByUserId(
     userId: Types.ObjectId
   ): Promise<OrderItemResponseDTO[]> {
-    const orderItems = await OrderItem.find({ user_id: userId })
+    // Only return items that are not yet ordered (pending cart items)
+    const orderItems = await OrderItem.find({
+      user_id: userId,
+      is_ordered: false,
+    })
       .populate("product_id")
       .exec();
     return orderItems.map((item) => this.mapOrderItem(item));
+  }
+
+  async markAsOrdered(itemIds: Types.ObjectId[]): Promise<void> {
+    await OrderItem.updateMany(
+      { _id: { $in: itemIds } },
+      { $set: { is_ordered: true } }
+    ).exec();
+  }
+
+  async markAllUserItemsAsOrdered(userId: Types.ObjectId): Promise<void> {
+    await OrderItem.updateMany(
+      { user_id: userId, is_ordered: false },
+      { $set: { is_ordered: true } }
+    ).exec();
   }
 
   async delete(id: string): Promise<boolean> {
