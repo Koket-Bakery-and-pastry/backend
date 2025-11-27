@@ -3,6 +3,8 @@ import { IUser } from "../../../database/models/user.model";
 import { CreateUserDto } from "../dtos/users.dto";
 import { UserRepository } from "../repositories/users.repository";
 import * as bcrypt from "bcrypt";
+import Order from "../../../database/models/order.model";
+import ProductReview from "../../../database/models/productReview.model";
 
 // Users service placeholder.
 export class UserService {
@@ -95,16 +97,46 @@ export class UserService {
   }
 
   /**
-   * Gets the current authenticated user's profile.
+   * Gets the current authenticated user's profile with stats.
    * @param id The user ID.
-   * @returns The user without sensitive fields.
+   * @returns The user profile with total orders, spending, and recent ratings.
    * @throws HttpError if user not found.
    */
-  async getProfile(id: string): Promise<IUser> {
+  async getProfile(id: string): Promise<any> {
     const user = await this.userRepository.findByIdSafe(id);
     if (!user) {
       throw new HttpError(404, "User not found");
     }
-    return user;
+
+    // Get user's orders
+    const orders = await Order.find({ user_id: id }).exec();
+    const totalOrders = orders.length;
+
+    // Calculate total spending (sum of total_price from all orders)
+    const totalSpending = orders.reduce(
+      (sum, order) => sum + (order.total_price || 0),
+      0
+    );
+
+    // Get user's recent ratings (reviews)
+    const recentRatings = await ProductReview.find({ user_id: id })
+      .populate("product_id", "name image_url")
+      .sort({ created_at: -1 })
+      .limit(5)
+      .exec();
+
+    return {
+      ...user.toObject(),
+      stats: {
+        totalOrders,
+        totalSpending,
+        recentRatings: recentRatings.map((review) => ({
+          product: review.product_id,
+          rating: review.rating,
+          comment: review.comment,
+          created_at: review.created_at,
+        })),
+      },
+    };
   }
 }

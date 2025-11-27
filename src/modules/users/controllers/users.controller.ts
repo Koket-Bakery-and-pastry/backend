@@ -27,12 +27,12 @@ export class UserController {
       if (!req.user) {
         return next(new HttpError(401, "Unauthorized"));
       }
-      const user = await this.userService.getProfile(
+      const profileData = await this.userService.getProfile(
         req.user.userId.toString()
       );
       res.status(200).json({
         message: "Profile retrieved successfully",
-        user,
+        ...profileData,
       });
     } catch (error: any) {
       next(
