@@ -8,6 +8,7 @@ export interface IOrderItem extends Document {
   quantity: number;
   custom_text?: string;
   additional_description?: string;
+  is_ordered: boolean;
   created_at: Date;
 }
 
@@ -19,6 +20,7 @@ const orderItemSchema = new Schema<IOrderItem>({
   quantity: { type: Number, default: 1 },
   custom_text: { type: String },
   additional_description: { type: String },
+  is_ordered: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
 });
 
