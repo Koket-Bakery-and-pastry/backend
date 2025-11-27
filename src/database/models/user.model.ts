@@ -8,6 +8,7 @@ export interface IUser extends Document {
   refresh_token?: string;
   googleId: string;
   profile_image_url?: string;
+  phone_number?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -43,6 +44,10 @@ const userSchema = new Schema<IUser>({
   },
   profile_image_url: {
     type: String,
+  },
+  phone_number: {
+    type: String,
+    trim: true,
   },
 
   created_at: {

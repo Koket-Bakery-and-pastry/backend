@@ -1,5 +1,5 @@
 import User, { IUser } from "../../../database/models/user.model";
-import { CreateUserDto } from "../dtos/users.dto";
+import { CreateUserDto, UpdateProfileDto } from "../dtos/users.dto";
 
 // Users repository placeholder.
 export class UserRepository {
@@ -12,6 +12,21 @@ export class UserRepository {
     const user = new User(userData);
     await user.save();
     return user;
+  }
+
+  /**
+   * Updates a user's profile.
+   * @param id The user ID.
+   * @param data The profile data to update.
+   * @returns The updated user document without sensitive fields.
+   */
+  async updateProfile(
+    id: string,
+    data: UpdateProfileDto
+  ): Promise<IUser | null> {
+    return User.findByIdAndUpdate(id, data, { new: true })
+      .select("-password_hash -refresh_token")
+      .exec();
   }
 
   /**
