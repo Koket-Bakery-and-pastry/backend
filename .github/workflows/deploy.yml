@@ -33,7 +33,7 @@ jobs:
           username: ${{ secrets.CPANEL_FTP_USERNAME }}
           password: ${{ secrets.CPANEL_FTP_PASSWORD }}
           local-dir: ./
-          server-dir: /repositories/backend/
+          server-dir: /backend/
           exclude: |
             **/.git*
             **/.git/**
