@@ -34,6 +34,7 @@ jobs:
           password: ${{ secrets.CPANEL_FTP_PASSWORD }}
           local-dir: ./
           server-dir: /backend/
+          dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/.git/**
@@ -48,7 +49,6 @@ jobs:
             **/test/**
             **/coverage/**
             **/dist/**/*.map
-            **/node_modules/.cache/**
             **/.env*
             **/src/**
-          log-level: minimal
+          log-level: verbose
