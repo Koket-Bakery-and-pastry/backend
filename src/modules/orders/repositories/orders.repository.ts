@@ -158,6 +158,13 @@ export class OrderItemRepository {
     const orderItem = new OrderItem(data);
     await orderItem.save();
     await orderItem.populate("product_id");
+    await orderItem.populate({
+      path: "product_id",
+      populate: [
+        { path: "category_id", model: "Category" },
+        { path: "subcategory_id", model: "Subcategory" },
+      ],
+    });
     return this.mapOrderItem(orderItem);
   }
 
@@ -165,6 +172,13 @@ export class OrderItemRepository {
     const orderItem = await OrderItem.findById(id)
       .populate("product_id")
       .exec();
+    await orderItem.populate({
+      path: "product_id",
+      populate: [
+        { path: "category_id", model: "Category" },
+        { path: "subcategory_id", model: "Subcategory" },
+      ],
+    });
     return orderItem ? this.mapOrderItem(orderItem) : null;
   }
 
@@ -177,6 +191,13 @@ export class OrderItemRepository {
     })
       .populate("product_id")
       .exec();
+    await orderItem.populate({
+      path: "product_id",
+      populate: [
+        { path: "category_id", model: "Category" },
+        { path: "subcategory_id", model: "Subcategory" },
+      ],
+    });
     return orderItem ? this.mapOrderItem(orderItem) : null;
   }
 
@@ -190,6 +211,13 @@ export class OrderItemRepository {
     })
       .populate("product_id")
       .exec();
+    await OrderItem.populate(orderItems, {
+      path: "product_id",
+      populate: [
+        { path: "category_id", model: "Category" },
+        { path: "subcategory_id", model: "Subcategory" },
+      ],
+    });
     return orderItems.map((item) => this.mapOrderItem(item));
   }
 
