@@ -12,6 +12,7 @@ import {
   UpdateOrderDTO,
   UpdateOrderItemDTO,
 } from "../dtos/orders.dto";
+import { HttpError } from "../../../core/errors/HttpError";
 import { Types } from "mongoose";
 import { ObjectId } from "mongodb";
 
@@ -55,6 +56,21 @@ export class OrdersService {
     id: string,
     data: Partial<UpdateOrderDTO>
   ): Promise<OrderResponseDTO | null> {
+    // Prevent changing status of an order that has already been rejected
+    if (data && typeof data === "object" && data.status) {
+      const existing = await this.ordersRepository.findById(id);
+      if (
+        existing &&
+        existing.status === "rejected" &&
+        data.status !== "rejected"
+      ) {
+        throw new HttpError(
+          400,
+          "Cannot change status of an order that has been rejected."
+        );
+      }
+    }
+
     const updatedOrder = await this.ordersRepository.update(id, data);
     return updatedOrder;
   }
