@@ -9,6 +9,12 @@ export interface IUser extends Document {
   googleId: string;
   profile_image_url?: string;
   phone_number?: string;
+  password_reset_otp?: string;
+  password_reset_otp_expires?: Date;
+  password_reset_token?: string;
+  password_reset_token_expires?: Date;
+  otp_request_count?: number;
+  last_otp_request?: Date;
   created_at: Date;
   updated_at: Date;
 }
@@ -48,6 +54,25 @@ const userSchema = new Schema<IUser>({
   phone_number: {
     type: String,
     trim: true,
+  },
+  password_reset_otp: {
+    type: String,
+  },
+  password_reset_otp_expires: {
+    type: Date,
+  },
+  password_reset_token: {
+    type: String,
+  },
+  password_reset_token_expires: {
+    type: Date,
+  },
+  otp_request_count: {
+    type: Number,
+    default: 0,
+  },
+  last_otp_request: {
+    type: Date,
   },
 
   created_at: {

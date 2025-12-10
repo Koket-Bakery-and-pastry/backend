@@ -94,6 +94,52 @@ export class AuthController {
       res.status(400).json({ message: e.message });
     }
   }
+
+  /**
+   * POST /api/v1/auth/forgot-password
+   * Send OTP to user's email
+   */
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      await authService.forgotPassword(req.body);
+      res.status(200).json({
+        message: "If this email exists, an OTP has been sent",
+      });
+    } catch (e: any) {
+      const status = e.statusCode || 500;
+      res.status(status).json({ message: e.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/verify-otp
+   * Verify OTP code
+   */
+  async verifyOtp(req: Request, res: Response) {
+    try {
+      const result = await authService.verifyOtp(req.body);
+      res.status(200).json(result);
+    } catch (e: any) {
+      const status = e.statusCode || 400;
+      res.status(status).json({ message: e.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/reset-password
+   * Reset password with OTP
+   */
+  async resetPassword(req: Request, res: Response) {
+    try {
+      await authService.resetPassword(req.body);
+      res.status(200).json({
+        message: "Password reset successfully",
+      });
+    } catch (e: any) {
+      const status = e.statusCode || 400;
+      res.status(status).json({ message: e.message });
+    }
+  }
 }
 
 export const authController = new AuthController();

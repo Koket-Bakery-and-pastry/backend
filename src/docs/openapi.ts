@@ -910,6 +910,213 @@ const openApiDocument = {
       },
     },
 
+    "/auth/forgot-password": {
+      post: {
+        tags: ["Users"],
+        summary: "Request password reset OTP",
+        description:
+          "Sends a 6-digit OTP to the user's email. Rate limited to 3 requests per hour.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email"],
+                properties: {
+                  email: {
+                    type: "string",
+                    format: "email",
+                    example: "user@example.com",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description:
+              "OTP sent successfully (or email not found - security measure)",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example: "If this email exists, an OTP has been sent",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "429": {
+            description: "Rate limit exceeded",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example: "Too many OTP requests. Please try again later",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/auth/verify-otp": {
+      post: {
+        tags: ["Users"],
+        summary: "Verify OTP code and get reset token",
+        description:
+          "Validates the OTP sent to user's email. Returns a temporary reset token (valid for 10 minutes) to use in the reset-password endpoint.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email", "otp"],
+                properties: {
+                  email: {
+                    type: "string",
+                    format: "email",
+                    example: "user@example.com",
+                  },
+                  otp: {
+                    type: "string",
+                    pattern: "^[0-9]{6}$",
+                    example: "123456",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OTP verified successfully, reset token returned",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example:
+                        "OTP verified successfully. Use the reset token to change your password.",
+                    },
+                    resetToken: {
+                      type: "string",
+                      description:
+                        "Temporary reset token (valid for 10 minutes)",
+                      example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid or expired OTP",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example: "Invalid or expired OTP",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/auth/reset-password": {
+      post: {
+        tags: ["Users"],
+        summary: "Reset password with reset token",
+        description:
+          "Resets user password using the temporary reset token received from verify-otp endpoint. Reset token must be valid and not expired (10 minutes).",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email", "resetToken", "newPassword"],
+                properties: {
+                  email: {
+                    type: "string",
+                    format: "email",
+                    example: "user@example.com",
+                  },
+                  resetToken: {
+                    type: "string",
+                    description:
+                      "Temporary reset token from verify-otp endpoint",
+                    example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+                  },
+                  newPassword: {
+                    type: "string",
+                    minLength: 8,
+                    example: "NewP@ssw0rd!",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Password reset successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example: "Password reset successfully",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid or expired reset token",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example: "Invalid or expired reset token",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
     "/products": {
       post: {
         tags: ["Products"],

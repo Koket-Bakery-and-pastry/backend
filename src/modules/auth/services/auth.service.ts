@@ -7,9 +7,14 @@ import {
   LoginDto,
   RegisterDto,
   TokenPayload,
+  ForgotPasswordDto,
+  VerifyOtpDto,
+  ResetPasswordDto,
 } from "../dtos/auth.dto";
 import { Types } from "mongoose";
 import User, { IUser } from "../../../database/models/user.model";
+import { EmailService } from "../../../shared/utils/email.service";
+import { HttpError } from "../../../core/errors/HttpError";
 
 class AuthService {
   private googleClient: Client | undefined;
@@ -200,6 +205,107 @@ class AuthService {
 
   async logout(userId: string) {
     return await AuthRepository.expireTokens(userId);
+  }
+
+  /**
+   * Step 1: Send OTP to user's email
+   */
+  async forgotPassword(data: ForgotPasswordDto): Promise<void> {
+    const user = await AuthRepository.findUserByEmail(data.email);
+
+    if (!user) {
+      // Don't reveal if email exists
+      throw new HttpError(404, "If this email exists, an OTP has been sent");
+    }
+
+    // Rate limiting: Max 3 requests per hour
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+    if (
+      user.last_otp_request &&
+      user.last_otp_request > oneHourAgo &&
+      (user.otp_request_count || 0) >= 3
+    ) {
+      throw new HttpError(
+        429,
+        "Too many OTP requests. Please try again in an hour"
+      );
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash OTP before storing
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    // Set expiry to 10 minutes from now
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+    // Store hashed OTP in database
+    await AuthRepository.storePasswordResetOTP(
+      data.email,
+      hashedOtp,
+      expiresAt
+    );
+    // Send OTP via email
+    await EmailService.sendPasswordResetOTP(data.email, user.name, otp);
+    console.log(`Password reset OTP for ${data.email}: ${otp}`);
+  }
+
+  /**
+   * Step 2: Verify OTP and return reset token
+   */
+  async verifyOtp(
+    data: VerifyOtpDto
+  ): Promise<{ message: string; resetToken: string }> {
+    const user = await AuthRepository.verifyPasswordResetOTP(data.email);
+
+    if (!user) {
+      throw new HttpError(400, "Invalid or expired OTP");
+    }
+
+    // Compare provided OTP with hashed OTP
+    const isValid = await bcrypt.compare(data.otp, user.password_reset_otp!);
+
+    if (!isValid) {
+      throw new HttpError(400, "Invalid OTP");
+    }
+
+    // Generate temporary reset token (valid for 10 minutes)
+    const resetToken = generators.random(32); // crypto-secure random token
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store reset token and clear OTP
+    await AuthRepository.storeResetToken(data.email, resetToken, expiresAt);
+
+    return {
+      message:
+        "OTP verified successfully. Use the reset token to change your password.",
+      resetToken,
+    };
+  }
+
+  /**
+   * Step 3: Reset password with reset token
+   */
+  async resetPassword(data: ResetPasswordDto): Promise<void> {
+    const user = await AuthRepository.verifyResetToken(
+      data.email,
+      data.resetToken
+    );
+
+    if (!user) {
+      throw new HttpError(400, "Invalid or expired reset token");
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(data.newPassword, 10);
+
+    // Update password and clear OTP fields
+    await AuthRepository.updatePassword(data.email, hashedPassword);
+
+    // Clear reset token
+    await AuthRepository.clearResetToken(data.email);
   }
 }
 
