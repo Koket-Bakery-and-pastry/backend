@@ -96,7 +96,8 @@ export class UserController {
       const data: UpdateProfileDto = {
         name: req.body.name,
         email: req.body.email,
-        phone_number: req.body.phone_number,
+        // accept both snake_case and camelCase from clients
+        phone_number: req.body.phone_number ?? req.body.phoneNumber,
       };
 
       // Remove undefined fields

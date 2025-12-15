@@ -196,11 +196,16 @@ class AuthService {
     }
   }
 
-  async createAdmin(name: string, email: string, password: string) {
+  async createAdmin(
+    name: string,
+    email: string,
+    password: string,
+    phone_number?: string
+  ): Promise<IUser | null> {
     const existing = await User.findOne({ email });
     if (existing) return null;
     const hashed = await bcrypt.hash(password, 10);
-    return await AuthRepository.create(name, email, hashed);
+    return await AuthRepository.create(name, email, hashed, phone_number);
   }
 
   async logout(userId: string) {

@@ -23,7 +23,7 @@ export class UserService {
   async registerUser(
     userData: CreateUserDto
   ): Promise<Omit<IUser, "password_hash">> {
-    const { name, email, password } = userData;
+    const { name, email, password, phone_number } = userData;
 
     const existingUser = await this.userRepository.findByEmail(email);
 
@@ -42,6 +42,7 @@ export class UserService {
       name,
       email,
       password_hash,
+      phone_number,
     } as any);
     const { password_hash: _, ...userWithoutHash } = newUser.toObject();
     return userWithoutHash;

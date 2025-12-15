@@ -42,12 +42,18 @@ export async function expireTokens(userId: string) {
   );
 }
 
-export async function create(name: string, email: string, password: string) {
+export async function create(
+  name: string,
+  email: string,
+  password: string,
+  phone_number?: string
+) {
   const user = await User.create({
     name: name,
     email: email,
     password_hash: password,
     role: "admin",
+    phone_number: phone_number,
   });
   return user;
 }

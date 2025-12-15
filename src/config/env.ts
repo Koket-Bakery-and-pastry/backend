@@ -10,5 +10,6 @@ export const Env = {
     process.env.JWT_REFRESH_SECRET || "your_jwt_refresh_secret",
   ADMIN_NAME: process.env.ADMIN_NAME || "Admin",
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || "email@admin.com",
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "admin",
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "admins",
+  ADMIN_PHONE_NUMBER: process.env.ADMIN_PHONE_NUMBER || "",
 };

@@ -2,12 +2,15 @@ import nodemailer from "nodemailer";
 
 // Create transporter using cPanel SMTP
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "mail.yourdomain.com", // Your cPanel mail server
-  port: parseInt(process.env.SMTP_PORT || "465"),
-  secure: true, // true for 465, false for other ports
+  host: process.env.SMTP_HOST || "mail.yourdomain.com",
+  port: parseInt(process.env.SMTP_PORT || "587"),
+  secure: false, // false for 587 (STARTTLS), true for 465 (SSL)
   auth: {
     user: process.env.SMTP_USER || "noreply@yourdomain.com",
     pass: process.env.SMTP_PASS || "",
+  },
+  tls: {
+    rejectUnauthorized: false, // Accept self-signed certificates
   },
 });
 
@@ -62,7 +65,18 @@ export class EmailService {
       });
     } catch (error) {
       console.error("Error sending OTP email:", error);
-      throw new Error("Failed to send OTP email");
+      // Log detailed error for debugging
+      if (error instanceof Error) {
+        console.error("Error details:", {
+          message: error.message,
+          stack: error.stack,
+        });
+      }
+      throw new Error(
+        `Failed to send OTP email: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 }
