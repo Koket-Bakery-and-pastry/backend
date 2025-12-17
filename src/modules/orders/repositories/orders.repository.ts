@@ -219,7 +219,7 @@ export class OrderItemRepository {
       user_id: userId,
       is_ordered: false,
     })
-      .select("-password_hash refresh_token")
+      // .select("-password_hash refresh_token")
       .populate("product_id")
       .exec();
     await OrderItem.populate(orderItems, {
