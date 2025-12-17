@@ -163,13 +163,11 @@ export class OrderItemRepository {
   async create(data: CreateOrderItemDTO): Promise<OrderItemResponseDTO> {
     const orderItem = new OrderItem(data);
     await orderItem.save();
-    await orderItem.populate("product_id");
     await orderItem.populate({
       path: "product_id",
       populate: [
         { path: "category_id", model: "Category" },
         { path: "subcategory_id", model: "Subcategory" },
-        { path: "user_id", model: "User" },
       ],
     });
     await OrderItem.populate(orderItem, { path: "user_id", model: "User" });
@@ -179,13 +177,13 @@ export class OrderItemRepository {
   async findById(id: string): Promise<OrderItemResponseDTO | null> {
     const orderItem = await OrderItem.findById(id)
       .populate("product_id")
+      .select("-password_hash refresh_token")
       .exec();
     await orderItem.populate({
       path: "product_id",
       populate: [
         { path: "category_id", model: "Category" },
         { path: "subcategory_id", model: "Subcategory" },
-        { path: "user_id", model: "User" },
       ],
     });
     await OrderItem.populate(orderItem, { path: "user_id", model: "User" });
@@ -199,6 +197,7 @@ export class OrderItemRepository {
     const orderItem = await OrderItem.findByIdAndUpdate(id, data, {
       new: true,
     })
+      .select("-password_hash refresh_token")
       .populate("product_id")
       .exec();
     await orderItem.populate({
@@ -206,7 +205,6 @@ export class OrderItemRepository {
       populate: [
         { path: "category_id", model: "Category" },
         { path: "subcategory_id", model: "Subcategory" },
-        { path: "user_id", model: "User" },
       ],
     });
 
@@ -221,6 +219,7 @@ export class OrderItemRepository {
       user_id: userId,
       is_ordered: false,
     })
+      .select("-password_hash refresh_token")
       .populate("product_id")
       .exec();
     await OrderItem.populate(orderItems, {
