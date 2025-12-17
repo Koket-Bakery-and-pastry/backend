@@ -1,6 +1,10 @@
 import { HttpError } from "../../../core/errors/HttpError";
 import { IUser } from "../../../database/models/user.model";
-import { CreateUserDto, UpdateProfileDto } from "../dtos/users.dto";
+import {
+  CreateUserDto,
+  UpdateProfileDto,
+  UserResponseDto,
+} from "../dtos/users.dto";
 import { UserRepository } from "../repositories/users.repository";
 import * as bcrypt from "bcrypt";
 import Order from "../../../database/models/order.model";
@@ -104,7 +108,10 @@ export class UserService {
    * @returns The updated user.
    * @throws HttpError if user not found or email already exists.
    */
-  async updateProfile(id: string, data: UpdateProfileDto): Promise<IUser> {
+  async updateProfile(
+    id: string,
+    data: UpdateProfileDto
+  ): Promise<UserResponseDto> {
     // Check if email is being updated and already exists
     if (data.email) {
       const existingUser = await this.userRepository.findByEmail(data.email);
