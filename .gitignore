@@ -29,6 +29,7 @@ coverage
 temp/
 .tmp/
 .cache/
+uploads/
 
 # Dependency directories
 node_modules/

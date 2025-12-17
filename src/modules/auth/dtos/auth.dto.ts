@@ -37,3 +37,18 @@ export interface TokenPayload {
   email: string;
   role: string;
 }
+
+export interface ForgotPasswordDto {
+  email: string;
+}
+
+export interface VerifyOtpDto {
+  email: string;
+  otp: string;
+}
+
+export interface ResetPasswordDto {
+  email: string;
+  resetToken: string;
+  newPassword: string;
+}

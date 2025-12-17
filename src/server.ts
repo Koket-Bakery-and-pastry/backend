@@ -10,7 +10,8 @@ const start = async () => {
     const admin = await authService.createAdmin(
       Env.ADMIN_NAME,
       Env.ADMIN_EMAIL,
-      Env.ADMIN_PASSWORD
+      Env.ADMIN_PASSWORD,
+      Env.ADMIN_PHONE_NUMBER
     );
     console.log(admin ? "☑ Admin user ensured" : "☑ Admin user already exists");
 

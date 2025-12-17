@@ -1,5 +1,9 @@
 import User, { IUser } from "../../../database/models/user.model";
-import { CreateUserDto, UpdateProfileDto } from "../dtos/users.dto";
+import {
+  CreateUserDto,
+  UpdateProfileDto,
+  UserResponseDto,
+} from "../dtos/users.dto";
 
 // Users repository placeholder.
 export class UserRepository {
@@ -20,12 +24,9 @@ export class UserRepository {
    * @param data The profile data to update.
    * @returns The updated user document without sensitive fields.
    */
-  async updateProfile(
-    id: string,
-    data: UpdateProfileDto
-  ): Promise<IUser | null> {
+  async updateProfile(id: string, data: UpdateProfileDto): Promise<any | null> {
     return User.findByIdAndUpdate(id, data, { new: true })
-      .select("-password_hash -refresh_token")
+      .select("-refresh_token")
       .exec();
   }
 

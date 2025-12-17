@@ -18,7 +18,33 @@ function testAuthMiddleware(req: any, res: any, next: any) {
 }
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = [
+  "https://koket-bakery.com",
+  "https://www.koket-bakery.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+  "http://localhost:5001",
+  "http://backend.koket-bakery.com",
+  "https://backend.koket-bakery.com",
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // allow tools like curl/postman
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(express.json());
 
 // Add session middleware

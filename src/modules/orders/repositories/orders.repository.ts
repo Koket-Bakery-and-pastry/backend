@@ -76,7 +76,7 @@ export class OrdersRepository {
       path: "order_items",
       populate: { path: "product_id", model: Product.modelName },
     });
-
+    await Order.populate(order, { path: "user_id", model: "User" });
     return this.mapOrder(order);
   }
 
@@ -87,6 +87,7 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
+    await Order.populate(order, { path: "user_id", model: "User" });
     return order ? this.mapOrder(order) : null;
   }
 
@@ -100,6 +101,7 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
+    await Order.populate(order, { path: "user_id", model: "User" });
     return order ? this.mapOrder(order) : null;
   }
 
@@ -110,6 +112,7 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
+    await Order.populate(orders, { path: "user_id", model: "User" });
     return orders.map((order) => this.mapOrder(order));
   }
 
@@ -120,6 +123,7 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
+    await Order.populate(orders, { path: "user_id", model: "User" });
     return orders.map((order) => this.mapOrder(order));
   }
   async getAllOrders(): Promise<OrderResponseDTO[]> {
@@ -129,6 +133,7 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
+    await Order.populate(orders, { path: "user_id", model: "User" });
     return orders.map((order) => this.mapOrder(order));
   }
 
@@ -139,6 +144,7 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
+    await Order.populate(orders, { path: "user_id", model: "User" });
     return orders.map((order) => this.mapOrder(order));
   }
 }
@@ -163,8 +169,10 @@ export class OrderItemRepository {
       populate: [
         { path: "category_id", model: "Category" },
         { path: "subcategory_id", model: "Subcategory" },
+        { path: "user_id", model: "User" },
       ],
     });
+    await OrderItem.populate(orderItem, { path: "user_id", model: "User" });
     return this.mapOrderItem(orderItem);
   }
 
@@ -177,8 +185,10 @@ export class OrderItemRepository {
       populate: [
         { path: "category_id", model: "Category" },
         { path: "subcategory_id", model: "Subcategory" },
+        { path: "user_id", model: "User" },
       ],
     });
+    await OrderItem.populate(orderItem, { path: "user_id", model: "User" });
     return orderItem ? this.mapOrderItem(orderItem) : null;
   }
 
@@ -196,8 +206,10 @@ export class OrderItemRepository {
       populate: [
         { path: "category_id", model: "Category" },
         { path: "subcategory_id", model: "Subcategory" },
+        { path: "user_id", model: "User" },
       ],
     });
+
     return orderItem ? this.mapOrderItem(orderItem) : null;
   }
 
@@ -218,6 +230,8 @@ export class OrderItemRepository {
         { path: "subcategory_id", model: "Subcategory" },
       ],
     });
+
+    await OrderItem.populate(orderItems, { path: "user_id", model: "User" });
     return orderItems.map((item) => this.mapOrderItem(item));
   }
 
