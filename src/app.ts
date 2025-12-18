@@ -32,33 +32,43 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // allow tools like curl/postman
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
+    origin: [
+      "https://koket-bakery.com",
+      "https://www.koket-bakery.com",
+      "http://localhost:3000",
+    ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET!,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: true,
+      sameSite: "none",
+      maxAge: 1000 * 60 * 15,
+    },
   })
 );
 
 app.use(express.json());
 
 // Add session middleware
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "your-secret-key",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 1000 * 60 * 15, // 15 minutes
-    },
-  })
-);
+// app.use(
+//   session({
+//     secret: process.env.SESSION_SECRET || "your-secret-key",
+//     resave: false,
+//     saveUninitialized: false,
+//     cookie: {
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "none",
+//       maxAge: 1000 * 60 * 15, // 15 minutes
+//     },
+//   })
+// );
 
 app.use("/uploads", express.static("uploads"));
 app.use(express.static(path.join(__dirname, "public")));
