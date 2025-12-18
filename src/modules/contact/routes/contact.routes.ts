@@ -8,7 +8,7 @@ import {
 const router = Router();
 const controller = new contactController();
 
-router.post("/", authenticate, controller.createContact.bind(controller));
+router.post("/", controller.createContact.bind(controller));
 router.get(
   "/",
   authenticate,
