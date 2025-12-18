@@ -8,6 +8,7 @@ import productReviewRoutes from "../../modules/reviews/routes/reviews.routes";
 import cartsRoute from "../../modules/carts/routes/carts.routes";
 import orderRoutes from "../../modules/orders/routes/orders.routes";
 import analyticsRoute from "../../modules/analytics/routes/analytics.routes";
+import contactRoutes from "../../modules/contact/routes/contact.routes";
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use("/reviews", productReviewRoutes);
 router.use("/carts", cartsRoute);
 router.use("/orders", orderRoutes);
 router.use("/analytics", analyticsRoute);
+router.use("/contact", contactRoutes);
 
 export default router;
