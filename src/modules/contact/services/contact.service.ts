@@ -17,4 +17,7 @@ export class ContactService {
   async getContactById(id: string): Promise<ContactResponseDto | null> {
     return this.contactsRepository.findById(id);
   }
+  async deleteContact(id: string): Promise<void> {
+    return this.contactsRepository.delete(id);
+  }
 }

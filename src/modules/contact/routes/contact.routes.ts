@@ -61,4 +61,11 @@ router.get(
  *       200:
  *         description: Contact found
  */
+
+router.delete(
+  "/:id",
+  authenticate,
+  authorize("admin"),
+  controller.deleteContact.bind(controller)
+);
 export default router;

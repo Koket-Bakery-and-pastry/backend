@@ -61,4 +61,20 @@ export class contactController {
       );
     }
   }
+
+  async deleteContact(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id;
+      await this.ContactService.deleteContact(id);
+      res.status(200).json({
+        message: "Contact deleted successfully",
+      });
+    } catch (error: any) {
+      next(
+        error instanceof HttpError
+          ? error
+          : new HttpError(500, "Internal Server Error")
+      );
+    }
+  }
 }
