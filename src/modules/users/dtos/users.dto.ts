@@ -11,9 +11,11 @@ export interface UpdateProfileDto {
   email?: string;
   phone_number?: string;
   password?: string;
+  password_hash?: string;
 }
 
 export interface UserResponseDto {
+  _id?: string;
   id: string;
   name: string;
   email: string;
