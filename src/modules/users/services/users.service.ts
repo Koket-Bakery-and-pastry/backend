@@ -26,7 +26,7 @@ export class UserService {
    */
   async registerUser(
     userData: CreateUserDto
-  ): Promise<Omit<IUser, "password_hash">> {
+  ): Promise<Omit<UserResponseDto, "password_hash">> {
     const { name, email, password, phone_number } = userData;
 
     const existingUser = await this.userRepository.findByEmail(email);
@@ -48,15 +48,14 @@ export class UserService {
       password_hash,
       phone_number,
     } as any);
-    const { password_hash: _, ...userWithoutHash } = newUser.toObject();
-    return userWithoutHash;
+    return newUser;
   }
 
   /**
    * Gets all users (admin only).
    * @returns An array of all users without sensitive fields.
    */
-  async getAllUsers(): Promise<IUser[]> {
+  async getAllUsers(): Promise<UserResponseDto[]> {
     return this.userRepository.findAll();
   }
 
@@ -66,7 +65,7 @@ export class UserService {
    * @returns The user without sensitive fields.
    * @throws HttpError if user not found.
    */
-  async getUserById(id: string): Promise<IUser> {
+  async getUserById(id: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findByIdSafe(id);
     if (!user) {
       throw new HttpError(404, "User not found");
@@ -93,7 +92,10 @@ export class UserService {
    * @returns The updated user.
    * @throws HttpError if user not found.
    */
-  async updateProfileImage(id: string, imageUrl: string): Promise<IUser> {
+  async updateProfileImage(
+    id: string,
+    imageUrl: string
+  ): Promise<UserResponseDto> {
     const user = await this.userRepository.updateProfileImage(id, imageUrl);
     if (!user) {
       throw new HttpError(404, "User not found");
@@ -119,10 +121,19 @@ export class UserService {
         throw new HttpError(409, "Email already in use by another account");
       }
     }
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = (data.password_hash = await bcrypt.hash(
+      data.password,
+      salt
+    ));
+
+    data.password_hash = password_hash;
+    delete data.password;
 
     const user = await this.userRepository.updateProfile(id, data);
+    console.log("Updated user:", user);
     if (!user) {
-      throw new HttpError(404, "User not found");
+      throw new HttpError(404, `User not found {id: ${id}}`);
     }
     return user;
   }
@@ -157,7 +168,7 @@ export class UserService {
       .exec();
 
     return {
-      ...user.toObject(),
+      ...user,
       stats: {
         totalOrders,
         totalSpending,

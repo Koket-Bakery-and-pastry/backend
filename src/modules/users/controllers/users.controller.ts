@@ -107,12 +107,12 @@ export class UserController {
           delete data[key as keyof UpdateProfileDto];
         }
       });
+      console.log("Profile update response sent.");
 
       const user = await this.userService.updateProfile(
         req.user.userId.toString(),
         data
       );
-
       res.status(200).json({
         message: "Profile updated successfully",
         user,
