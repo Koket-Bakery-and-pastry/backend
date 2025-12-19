@@ -42,7 +42,6 @@ export class OrdersService {
     data.payment_proof_url = `/uploads/orders/${newFileName}`;
 
     const order = await this.ordersRepository.create(data);
-    console.log("Created order:", order);
 
     return order;
   }
@@ -113,9 +112,10 @@ export class OrderItemService {
       throw new Error("Invalid order item id");
     }
     const item = await this.getOrderItemById(id);
-    if (!item.user_id.equals(new ObjectId(userId))) {
+    if (!item.user_id._id.equals(new ObjectId(userId))) {
       return null;
     }
+    // console.log("Updating order item (service):", id, data);
     return await this.orderItemRepository.update(id, data);
   }
 

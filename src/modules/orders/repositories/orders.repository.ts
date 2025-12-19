@@ -68,7 +68,6 @@ export class OrdersRepository {
       ...data,
       order_items: orderItemIds,
     });
-    console.log("Saving order:", order);
     await order.save();
 
     // populate the product document (not just its id) for each order item
@@ -76,7 +75,11 @@ export class OrdersRepository {
       path: "order_items",
       populate: { path: "product_id", model: Product.modelName },
     });
-    await Order.populate(order, { path: "user_id", model: "User" });
+    await Order.populate(order, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return this.mapOrder(order);
   }
 
@@ -87,7 +90,11 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
-    await Order.populate(order, { path: "user_id", model: "User" });
+    await Order.populate(order, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return order ? this.mapOrder(order) : null;
   }
 
@@ -101,7 +108,11 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
-    await Order.populate(order, { path: "user_id", model: "User" });
+    await Order.populate(order, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return order ? this.mapOrder(order) : null;
   }
 
@@ -112,7 +123,11 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
-    await Order.populate(orders, { path: "user_id", model: "User" });
+    await Order.populate(orders, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return orders.map((order) => this.mapOrder(order));
   }
 
@@ -123,7 +138,11 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
-    await Order.populate(orders, { path: "user_id", model: "User" });
+    await Order.populate(orders, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return orders.map((order) => this.mapOrder(order));
   }
   async getAllOrders(): Promise<OrderResponseDTO[]> {
@@ -133,7 +152,11 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
-    await Order.populate(orders, { path: "user_id", model: "User" });
+    await Order.populate(orders, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return orders.map((order) => this.mapOrder(order));
   }
 
@@ -144,7 +167,11 @@ export class OrdersRepository {
         populate: { path: "product_id", model: Product.modelName },
       })
       .exec();
-    await Order.populate(orders, { path: "user_id", model: "User" });
+    await Order.populate(orders, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return orders.map((order) => this.mapOrder(order));
   }
 }
@@ -170,15 +197,20 @@ export class OrderItemRepository {
         { path: "subcategory_id", model: "Subcategory" },
       ],
     });
-    await OrderItem.populate(orderItem, { path: "user_id", model: "User" });
+    await OrderItem.populate(orderItem, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return this.mapOrderItem(orderItem);
   }
 
   async findById(id: string): Promise<OrderItemResponseDTO | null> {
     const orderItem = await OrderItem.findById(id)
       .populate("product_id")
-      .select("-password_hash refresh_token")
+      .select({ password_hash: 0, refresh_token: 0 })
       .exec();
+
     await orderItem.populate({
       path: "product_id",
       populate: [
@@ -186,7 +218,11 @@ export class OrderItemRepository {
         { path: "subcategory_id", model: "Subcategory" },
       ],
     });
-    await OrderItem.populate(orderItem, { path: "user_id", model: "User" });
+    await OrderItem.populate(orderItem, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return orderItem ? this.mapOrderItem(orderItem) : null;
   }
 
@@ -196,16 +232,18 @@ export class OrderItemRepository {
   ): Promise<OrderItemResponseDTO | null> {
     const orderItem = await OrderItem.findByIdAndUpdate(id, data, {
       new: true,
-    })
-      .select("-password_hash refresh_token")
-      .populate("product_id")
-      .exec();
+    }).exec();
     await orderItem.populate({
       path: "product_id",
       populate: [
         { path: "category_id", model: "Category" },
         { path: "subcategory_id", model: "Subcategory" },
       ],
+    });
+    await OrderItem.populate(orderItem, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
     });
 
     return orderItem ? this.mapOrderItem(orderItem) : null;
@@ -230,7 +268,11 @@ export class OrderItemRepository {
       ],
     });
 
-    await OrderItem.populate(orderItems, { path: "user_id", model: "User" });
+    await OrderItem.populate(orderItems, {
+      path: "user_id",
+      model: "User",
+      select: "-password_hash -refresh_token",
+    });
     return orderItems.map((item) => this.mapOrderItem(item));
   }
 

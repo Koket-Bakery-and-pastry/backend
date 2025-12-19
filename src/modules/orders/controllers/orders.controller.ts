@@ -244,6 +244,7 @@ export class OrderItemController {
         userId,
         data
       );
+
       if (!updatedItem) {
         res.status(404).json({ message: "Order item not found" });
         return;
