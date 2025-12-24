@@ -95,6 +95,42 @@ export class AuthController {
     }
   }
 
+  async verifyAdmin(req: Request, res: Response) {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res
+          .status(401)
+          .json({ isAdmin: false, message: "Invalid or expired token" });
+      }
+
+      const token = authHeader.substring(7);
+      const payload = authService.verifyToken(token);
+      const result = await authService.verifyAdmin(payload.userId);
+
+      if (!result.isAdmin) {
+        return res
+          .status(403)
+          .json({ isAdmin: false, message: "Admin privileges required" });
+      }
+
+      return res.status(200).json({
+        isAdmin: true,
+        user: result.user,
+      });
+    } catch (e: any) {
+      const status = e.status || e.statusCode || 401;
+      const message =
+        e.message === "Invalid token"
+          ? "Invalid or expired token"
+          : e.message || "Invalid or expired token";
+      return res.status(status).json({
+        isAdmin: false,
+        message,
+      });
+    }
+  }
+
   /**
    * POST /api/v1/auth/forgot-password
    * Send OTP to user's email

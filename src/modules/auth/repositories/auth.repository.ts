@@ -1,4 +1,5 @@
 import User from "../../../database/models/user.model";
+import { OAuthState } from "../../../database/models/oauth_state.model";
 // auth/repositories/auth.repository.ts
 
 export async function findUserByEmail(email: string) {
@@ -148,4 +149,13 @@ export async function clearResetToken(email: string) {
     },
     { new: true }
   );
+}
+
+export async function storeOAuthState(state: string, codeVerifier: string) {
+  return await OAuthState.create({ state, code_verifier: codeVerifier });
+}
+
+export async function getAndRemoveOAuthVerifier(state: string) {
+  const record = await OAuthState.findOneAndDelete({ state });
+  return record ? record.code_verifier : null;
 }

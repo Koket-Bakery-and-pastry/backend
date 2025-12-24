@@ -1,4 +1,8 @@
-import { Issuer, generators, Client } from "openid-client";
+import { Issuer, generators, Client, custom } from "openid-client";
+
+custom.setHttpOptionsDefaults({
+  timeout: 10000,
+});
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as AuthRepository from "../repositories/auth.repository";
@@ -18,8 +22,7 @@ import { HttpError } from "../../../core/errors/HttpError";
 
 class AuthService {
   private googleClient: Client | undefined;
-  // store PKCE code_verifier per state value
-  private codeVerifierStore: Map<string, string> = new Map();
+  // private codeVerifierStore: Map<string, string> = new Map(); // Removed in favor of DB storage
   private redirectUri: string = process.env.GOOGLE_REDIRECT_URI!;
   private accessSecret: string = process.env.JWT_ACCESS_SECRET!;
   private refreshSecret: string = process.env.JWT_REFRESH_SECRET!;
@@ -44,7 +47,7 @@ class AuthService {
     const codeVerifier = generators.codeVerifier();
     const codeChallenge = generators.codeChallenge(codeVerifier);
 
-    this.codeVerifierStore.set(state, codeVerifier);
+    await AuthRepository.storeOAuthState(state, codeVerifier);
 
     return {
       url: client.authorizationUrl({
@@ -66,10 +69,9 @@ class AuthService {
     state: string
   ): Promise<AuthResponseDto> {
     const client = await this.getGoogleClient();
-    const codeVerifier = this.codeVerifierStore.get(state);
+    const codeVerifier = await AuthRepository.getAndRemoveOAuthVerifier(state);
     if (!codeVerifier) throw new Error("Missing code verifier for state");
-    // remove to prevent reuse
-    this.codeVerifierStore.delete(state);
+    // remove to prevent reuse -> handled by getAndRemoveOAuthVerifier
 
     const tokenSet = await client.callback(
       this.redirectUri,
@@ -157,6 +159,28 @@ class AuthService {
     if (!user) throw new Error("User not found");
 
     return this.generateTokens(user);
+  }
+
+  async verifyAdmin(userId: Types.ObjectId) {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new HttpError(401, "Invalid or expired token");
+    }
+
+    const isAdmin = user.role === "admin";
+
+    return {
+      isAdmin,
+      user: isAdmin
+        ? {
+            id: user._id as Types.ObjectId,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          }
+        : undefined,
+    };
   }
 
   private generateTokens(user: IUser): AuthResponseDto {

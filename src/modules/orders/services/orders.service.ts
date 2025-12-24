@@ -134,7 +134,7 @@ export class OrderItemService {
     }
 
     const item = await this.getOrderItemById(id);
-    if (!item.user_id.equals(new ObjectId(userId))) {
+    if (!item.user_id._id.equals(new ObjectId(userId))) {
       return null;
     }
     return await this.orderItemRepository.delete(id);

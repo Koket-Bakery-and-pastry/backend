@@ -291,6 +291,7 @@ export class OrderItemRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    console.log("Deleting order item with id(repo)):", id);
     const orderItem = await OrderItem.findByIdAndDelete(id).exec();
     return !!orderItem;
   }
